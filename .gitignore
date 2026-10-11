@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+dist/
+
+# Données locales
+*.db
+*.sqlite3
+uploads/
+
+# Secrets : jamais dans git
+.env
+.env.*
+!.env.example
+.dev-session-secret
+
+# Éditeurs et système (réglages propres à chaque PC)
+.claude/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Modèles de réglages (sans secrets)
+!deploy/env.production.example
+
+# Construction de l’interface
+*.tsbuildinfo

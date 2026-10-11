@@ -1,0 +1,51 @@
+# Nyuman HQ sur le serveur de Nyuman, à côté de nyuman-api.
+# Depuis le dossier deploy/ :  docker compose -f docker-compose.prod.yml up -d --build
+# Les réglages et mots de passe sont dans deploy/.env (copié depuis env.production.example, jamais dans git).
+
+name: nyuman-hq
+
+services:
+  hq-postgres:
+    image: postgres:16
+    container_name: nyuman-hq-postgres
+    environment:
+      POSTGRES_USER: hq
+      POSTGRES_PASSWORD: ${HQ_POSTGRES_PASSWORD:?HQ_POSTGRES_PASSWORD manque dans deploy/.env}
+      POSTGRES_DB: hq
+    volumes:
+      - hq_postgres:/var/lib/postgresql/data
+    # Aucun port publié : la base de HQ n'est joignable que par HQ, jamais depuis Internet.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hq -d hq"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  hq:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: nyuman-hq:latest
+    container_name: nyuman-hq
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://hq:${HQ_POSTGRES_PASSWORD}@hq-postgres:5432/hq
+    # Publié seulement sur le serveur lui-même : Nginx (et Cloudflare devant) est la seule porte d'entrée.
+    ports:
+      - "127.0.0.1:${HQ_PORT:-8002}:8000"
+    volumes:
+      - hq_uploads:/data/uploads
+    # Pour lire la base Nyuman en lecture seule par le port du serveur (NYUMAN_DB_LECTURE_URL avec host.docker.internal).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      hq-postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  hq_postgres:
+    name: nyuman_hq_postgres
+  hq_uploads:
+    name: nyuman_hq_uploads
