@@ -9,7 +9,10 @@
 4. **Fichiers** : par canal et par projet, aperçu (images, PDF), versions, qui a modifié quoi.
 5. **Suivi de projet façon Notion** : pages riches (titres, listes, cases à cocher, tableaux, images), bases de données avec vues **tableau / Kanban / calendrier**, tâches (responsable, échéance, statut) liées aux projets et aux décisions.
 6. **Salon** : objectif du trimestre + chiffres de l'app en lecture seule (totaux, sans données personnelles ; route demandée à Kodjo).
-7. **Décisions et équipe** : salle du conseil, file de validation, bureaux des humains et des agents.
+7. **Décisions et équipe (simplifiées par Mohamed le 13/11)** :
+   - **Équipe** : une fiche par membre (humain ou agent), ouverte en cliquant sur sa photo : poste, rôle, ce qu'il fait maintenant, ce qu'il a terminé, statut de présence. Rien d'autre.
+   - **Salle du conseil** : seulement les **propositions** (texte, chiffres, avis de Koffi) et le **vote** des heads.
+   - **Mis de côté pour plus tard** : journal des décisions revu à 30 jours, file de validation, journal d'actions des agents.
 8. **Branché sur Claude** : un **serveur MCP propre à HQ**, pour que les agents (Kodjo, Adjoua, Koffi, Mariam, Kwame…) lisent et écrivent dans HQ (messages, tâches, documents, décisions) comme aujourd'hui avec Notion. Chaque agent a son jeton et apparaît comme membre.
 9. **Pas d'e-mail** : on garde Gmail.
 
@@ -41,7 +44,7 @@ Fonctionne sur ordinateur et sur téléphone, sans service payant (la connexion 
 5. **Serveur MCP** : les agents lisent et écrivent messages et tâches (tôt, pour qu'ils vivent dans HQ dès le début).
 6. Projets façon Notion : pages, bases de données, vues tableau / Kanban / calendrier, tâches.
 7. Fichiers par canal et par projet (aperçu, versions).
-8. Salon, décisions, équipe.
+8. Salon, fiches de l'équipe, propositions et vote.
 9. Import Notion (si choisi), finitions téléphone, tests.
 
 Estimation : messagerie + réunions utilisables en local en environ une semaine ; l'ensemble en 3 à 4 semaines.
