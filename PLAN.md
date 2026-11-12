@@ -26,6 +26,21 @@ Une pastille sur la photo de chacun, qui change toute seule :
 - Les agents ont la même pastille : 🟢 au travail, 🟡 en attente, 🔴 bloqué.
 Fonctionne sur ordinateur et sur téléphone, sans service payant (la connexion en direct du serveur suffit). Prévu à l'étape 3, et relié aux réunions à l'étape 4.
 
+## « Ma journée » (validé par Mohamed le 13/11, à juger une fois construit)
+On suit le travail, pas les personnes. La plupart des membres sont à temps partiel.
+- Chacun indique ses **créneaux** sur sa fiche (« mar et jeu soir, sam matin »).
+- Les jours travaillés seulement : le matin, 1 à 3 tâches du jour ; le soir, cocher ce qui est fait + une ligne de blocage. Aucun rappel hors créneaux.
+- Les heads voient l'avancement des tâches et les blocages, **jamais** les heures de connexion.
+- Chacun voit en privé son propre temps (comme le « Temps d'écran » du téléphone).
+- Hors créneaux : hors ligne = normal, notifications en sourdine (sauf mention urgente).
+- Vendredi : bilan de la semaine comparé à ce que chacun avait prévu, sans classement.
+- Aucune capture d'écran, aucun suivi hors de HQ.
+
+## Règles de design (Mohamed, 13/11)
+- **Simple comme Teams** : barre d'icônes à gauche (Activité, Discussions, Agenda, Projets, Fichiers, Équipe), liste au milieu, contenu à droite. Une action évidente par écran.
+- **Couleurs dosées** : fond blanc, gris très clairs, texte encre. L'orange #BC600D seulement pour le bouton principal, l'élément sélectionné et les pastilles de non-lus.
+- **Pas de marron chocolat** : aucun fond marron, aucune barre latérale foncée, aucun brun en grande surface.
+
 ## Technologie
 - **Serveur** : Python + FastAPI (comme `nyuman-api`), base **PostgreSQL**.
 - **Temps réel** : WebSocket servi par le même serveur. Aucun service payant en plus.
