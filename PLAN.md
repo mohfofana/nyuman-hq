@@ -1,35 +1,53 @@
-# Nyuman HQ : plan de construction (Kwame, 13/11/2026)
+# Nyuman HQ : plan de construction (Kwame, 13/11/2026, revu le même jour)
 
-À lire avec `BRIEF.md`. Ce plan vise **une première version utilisable en local en environ une semaine**, en commençant par la messagerie et les réunions, comme Mohamed l'a demandé le 13/11.
+À lire avec `BRIEF.md`. Mohamed veut l'équivalent de **Microsoft Teams Business + le suivi de projet de Notion, relié à Claude** (précision transmise par Kodjo le 13/11). Objectif : **une première version utilisable en local**, en commençant par la messagerie et les réunions.
+
+## Ce que HQ contiendra
+1. **Messagerie** : canaux, messages privés, fils, mentions @, réactions, fichiers et images, présence (en ligne / occupé / absent), notifications, non-lus, recherche.
+2. **Réunions** : planifier, inviter, lien Google Meet (API Google Calendar) ou Jitsi en secours, rappel avant, compte rendu rattaché.
+3. **Agenda partagé** : réunions, échéances des tâches, rappels ; synchronisé avec Google Agenda.
+4. **Fichiers** : par canal et par projet, aperçu (images, PDF), versions, qui a modifié quoi.
+5. **Suivi de projet façon Notion** : pages riches (titres, listes, cases à cocher, tableaux, images), bases de données avec vues **tableau / Kanban / calendrier**, tâches (responsable, échéance, statut) liées aux projets et aux décisions.
+6. **Salon** : objectif du trimestre + chiffres de l'app en lecture seule (totaux, sans données personnelles ; route demandée à Kodjo).
+7. **Décisions et équipe** : salle du conseil, file de validation, bureaux des humains et des agents.
+8. **Branché sur Claude** : un **serveur MCP propre à HQ**, pour que les agents (Kodjo, Adjoua, Koffi, Mariam, Kwame…) lisent et écrivent dans HQ (messages, tâches, documents, décisions) comme aujourd'hui avec Notion. Chaque agent a son jeton et apparaît comme membre.
+9. **Pas d'e-mail** : on garde Gmail.
 
 ## Technologie
-- **Serveur** : Python + FastAPI (comme `nyuman-api`, pour que Kevin s'y retrouve), base **PostgreSQL**.
-- **Temps réel** : WebSocket servi par le même serveur (messages, présence, « en train d'écrire », notifications). Aucun service payant en plus.
-- **Interface** : React + Tailwind, web d'abord et utilisable sur téléphone (installable comme une app, notifications du navigateur).
-- **Design** : les jetons de `nyuman-dashboard-ui` (blanc, orange #BC600D dosé, encre #211B16, Work Sans, pastilles). Pas de thème à part.
-- **Fichiers et images** : sur le disque en local ; en ligne, un stockage compatible S3 (Cloudflare R2 : gratuit jusqu'à 10 Go).
-- **Réunions** : lien Google Meet créé par l'API Google Calendar (compte Google de l'équipe) ; si Google n'est pas branché, lien Jitsi automatique.
-- **Agents** : membres comme les autres (profil, statut, mentions). En v1 ils écrivent dans HQ par une petite porte d'entrée (un jeton par agent, créé par Mohamed ou Kevin). Pas d'IA qui tourne en boucle.
-- **Secrets** : jamais lus par Kwame. Un `.env.example` liste ce qu'il faut ; Mohamed ou Kevin remplissent `.env`.
+- **Serveur** : Python + FastAPI (comme `nyuman-api`), base **PostgreSQL**.
+- **Temps réel** : WebSocket servi par le même serveur. Aucun service payant en plus.
+- **Interface** : React + Tailwind, web d'abord, utilisable sur téléphone (installable, notifications du navigateur).
+- **Éditeur de pages** : un éditeur par blocs libre de droits (type BlockNote / Tiptap), stocké dans notre base.
+- **Design** : jetons de `nyuman-dashboard-ui` (blanc, orange #BC600D dosé, encre #211B16, Work Sans, pastilles).
+- **Fichiers** : disque en local ; en ligne, stockage compatible S3 (Cloudflare R2, gratuit jusqu'à 10 Go).
+- **MCP** : petit serveur MCP en Python qui parle à l'API de HQ avec le jeton de l'agent.
+- **Secrets** : jamais lus par Kwame. `.env.example` fourni ; Mohamed ou Kevin remplissent `.env`.
 
 ## Étapes (une étape = un commit, testée dans le navigateur, captures à Mohamed)
 1. Socle : serveur, base, connexion (en local : choisir son profil ; en ligne : Google), squelette des écrans.
-2. Messagerie : canaux, messages privés, fils, mentions @, réactions, fichiers et images.
-3. Messagerie (suite) : présence (en ligne / occupé / absent), notifications, non-lus, recherche.
-4. Réunions : planifier, inviter, lien Meet ou Jitsi, rappel avant, compte rendu rattaché (et posté dans le canal).
-5. Équipe, tâches, décisions : bureaux (humains + agents), tableau des tâches, salle du conseil, file de validation.
-6. Salon et bibliothèque : objectif du trimestre + chiffres de l'app (route en lecture seule demandée à Kodjo), documents avec historique.
-7. Finitions téléphone, tests, captures.
+2. Messagerie : canaux, MP, fils, @, réactions, fichiers et images.
+3. Messagerie (suite) : présence, notifications, non-lus, recherche.
+4. Réunions + agenda : planifier, inviter, Meet ou Jitsi, rappel, compte rendu ; vue agenda.
+5. **Serveur MCP** : les agents lisent et écrivent messages et tâches (tôt, pour qu'ils vivent dans HQ dès le début).
+6. Projets façon Notion : pages, bases de données, vues tableau / Kanban / calendrier, tâches.
+7. Fichiers par canal et par projet (aperçu, versions).
+8. Salon, décisions, équipe.
+9. Import Notion (si choisi), finitions téléphone, tests.
+
+Estimation : messagerie + réunions utilisables en local en environ une semaine ; l'ensemble en 3 à 4 semaines.
 
 ## Ce qui coûte de l'argent
 | Poste | Local | En ligne (estimation) |
 |---|---|---|
-| Hébergement serveur + base | 0 | Railway ≈ 10 à 15 $/mois |
-| Temps réel | 0 | inclus dans l'hébergement |
-| Fichiers | 0 | 0 jusqu'à 10 Go (R2) |
-| Google Meet / Calendar | 0 | 0 (projet Google Cloud gratuit) |
+| Hébergement serveur + base | 0 | Railway ≈ 10 à 20 $/mois |
+| Temps réel | 0 | inclus |
+| Fichiers | 0 | 0 jusqu'à 10 Go (R2), puis ≈ 0,015 $/Go/mois |
+| Google Meet / Agenda | 0 | 0 (projet Google Cloud gratuit) |
 | Jitsi | 0 | 0 |
+| Serveur MCP | 0 | inclus dans l'hébergement |
 | IA dans HQ | 0 | 0 en v1 (les agents restent les discussions Claude actuelles) |
 
+À comparer : Teams Business ≈ 6 à 12 $ par personne et par mois, Notion Plus ≈ 10 $ par personne.
+
 ## Questions ouvertes (posées à Mohamed le 13/11)
-Voir le message de Kwame du 13/11 : hébergement, liste des heads, compte Google des réunions, budget IA, connecteurs Notion / HubSpot / Asana.
+Hébergement, liste des heads, compte Google des réunions, budget IA, Notion (import ou zéro), stockage des fichiers.
