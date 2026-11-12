@@ -13,6 +13,16 @@
 8. **Branché sur Claude** : un **serveur MCP propre à HQ**, pour que les agents (Kodjo, Adjoua, Koffi, Mariam, Kwame…) lisent et écrivent dans HQ (messages, tâches, documents, décisions) comme aujourd'hui avec Notion. Chaque agent a son jeton et apparaît comme membre.
 9. **Pas d'e-mail** : on garde Gmail.
 
+## Présence automatique, comme Teams (demandé par Mohamed le 13/11)
+Une pastille sur la photo de chacun, qui change toute seule :
+- 🟢 **Disponible** : la personne a HQ ouvert et s'en sert.
+- 🟡 **Absent** : HQ ouvert mais rien touché depuis 10 minutes, ou HQ fermé depuis peu (avec « vu il y a 20 min »).
+- 🔴 **En réunion** : automatiquement pendant une réunion de l'agenda HQ (de l'heure de début à la fin, ou dès qu'on clique sur le lien).
+- ⚪ **Hors ligne** : plus aucune page HQ ouverte.
+- On peut choisir à la main **Occupé** ou **Ne pas déranger** (les notifications se taisent), avec un petit message (« En rendez-vous salon jusqu'à 15 h »).
+- Les agents ont la même pastille : 🟢 au travail, 🟡 en attente, 🔴 bloqué.
+Fonctionne sur ordinateur et sur téléphone, sans service payant (la connexion en direct du serveur suffit). Prévu à l'étape 3, et relié aux réunions à l'étape 4.
+
 ## Technologie
 - **Serveur** : Python + FastAPI (comme `nyuman-api`), base **PostgreSQL**.
 - **Temps réel** : WebSocket servi par le même serveur. Aucun service payant en plus.
