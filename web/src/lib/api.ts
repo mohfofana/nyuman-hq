@@ -8,7 +8,7 @@ export type Member = {
   avatar_tone: string;
   now_doing: string;
   schedule: string;
-  manual_status: "busy" | "dnd" | null;
+  manual_status: "busy" | "dnd" | "working" | "waiting" | "blocked" | null;
   status_message: string;
 };
 

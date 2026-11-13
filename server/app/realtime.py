@@ -23,12 +23,18 @@ class Hub:
         self.last_seen: Dict[str, datetime] = {}
         # membres « En réunion » (calculé par le planificateur des réunions)
         self.in_meeting: set = set()
+        # identifiants des agents (remplis au démarrage)
+        self.agents: set = set()
         self._lock = asyncio.Lock()
 
     # ----- présence -----
     def snapshot(self, member_id: str) -> dict:
         states = list(self.conns.get(member_id, {}).values())
         last = self.last_seen.get(member_id)
+        if member_id in self.agents:  # un agent n'a pas de WebSocket : actif s'il a agi récemment
+            recent = bool(last) and (now() - last).total_seconds() < 15 * 60
+            return {"member_id": member_id, "connected": recent, "idle": False,
+                    "in_meeting": member_id in self.in_meeting, "last_seen": last.isoformat() if last else None}
         return {
             "member_id": member_id,
             "connected": bool(states),
@@ -67,7 +73,11 @@ class Hub:
 
     def touch(self, member_id: str) -> None:
         """Un agent (sans WebSocket) qui agit compte comme vu à l'instant."""
+        was = self.snapshot(member_id)["connected"] if member_id in self.agents else None
         self.last_seen[member_id] = now()
+        if member_id in self.agents and not was:
+            import asyncio
+            asyncio.ensure_future(self.broadcast({"type": "presence", **self.snapshot(member_id)}))
 
     # ----- diffusion -----
     async def broadcast(self, event: dict, to: Optional[Iterable[str]] = None, exclude: Optional[str] = None) -> None:

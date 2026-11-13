@@ -107,3 +107,9 @@ async def test_lu_en_parallele_sans_erreur(mohamed):
     import asyncio
     rs = await asyncio.gather(*[mohamed.post("/api/channels/general/read") for _ in range(5)])
     assert {r.status_code for r in rs} == {204}
+
+
+async def test_deux_clics_une_seule_discussion_privee(mohamed):
+    import asyncio
+    rs = await asyncio.gather(*[mohamed.post("/api/dms", json={"member_ids": ["koffi"]}) for _ in range(4)])
+    assert len({r.json()["id"] for r in rs}) == 1

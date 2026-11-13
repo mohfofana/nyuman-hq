@@ -5,7 +5,7 @@ import { useSession } from "../lib/session";
 import { useLive } from "../lib/live";
 import { Avatar, TINTS, tintIndex } from "../components/Avatar";
 import { Badge, PresencePill } from "../components/ui";
-import { presenceOf } from "../lib/presence";
+import { presenceLabel, presenceOf } from "../lib/presence";
 import type { Member } from "../lib/api";
 import { OrgChart, useOrg } from "./OrgChart";
 
@@ -28,7 +28,7 @@ function Card({ m, onOpen }: { m: Member; onOpen: () => void }) {
       <button onClick={onOpen} className="block w-full px-5 pb-4 text-left">
         <div className="-mt-9 flex items-end justify-between">
           <Avatar member={m} presence={p} size="lg" ring />
-          <PresencePill p={p} />
+          <PresencePill p={p} label={presenceLabel(m, p)} />
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           <span className="text-[17px] font-semibold">{m.name}</span>
@@ -103,7 +103,7 @@ function Fiche({ m, onClose }: { m: Member; onClose: () => void }) {
           </div>
           <div className="text-ink-soft">{m.title}</div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <PresencePill p={p} />
+            <PresencePill p={p} label={presenceLabel(m, p)} />
             {m.status_message && <span className="text-sm text-ink-soft">« {m.status_message} »</span>}
           </div>
           {!mine && (

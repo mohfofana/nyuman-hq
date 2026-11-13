@@ -17,6 +17,10 @@ async def lifespan(_app: FastAPI):
         await seed(session)
         await seed_channels(session)
         await seed_org(session)
+        from sqlalchemy import select
+        from app.domain.models import Member
+        from app.realtime import hub
+        hub.agents = set((await session.scalars(select(Member.id).where(Member.kind == "agent"))).all())
     task = asyncio.create_task(meetings.scheduler())
     yield
     task.cancel()

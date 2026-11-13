@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Hash, MessageSquarePlus, Plus, Search, Video } from "lucide-react";
 import { chat, type Channel, type Member } from "../../lib/api";
 import { useSession } from "../../lib/session";
 import { useLive } from "../../lib/live";
 import { Avatar } from "../../components/Avatar";
-import { PRESENCE_LABEL, lastSeenLabel, presenceOf } from "../../lib/presence";
+import { lastSeenLabel, presenceLabel, presenceOf } from "../../lib/presence";
 import { useChannelMessages } from "./useMessages";
 import { MessageList } from "./MessageList";
 import { Composer } from "./Composer";
@@ -132,7 +132,7 @@ function ChatView({ channel }: { channel: Channel }) {
           <div className="min-w-0 flex-1">
             <div className="truncate font-semibold">{title}</div>
             <div className="truncate text-xs text-ink-muted">
-              {solo ? (lastSeenLabel(solo) ? `${PRESENCE_LABEL[presenceOf(solo)]} · ${lastSeenLabel(solo)}` : PRESENCE_LABEL[presenceOf(solo)]) + (solo.status_message ? ` · « ${solo.status_message} »` : "")
+              {solo ? (lastSeenLabel(solo) ? `${presenceLabel(solo, presenceOf(solo))} · ${lastSeenLabel(solo)}` : presenceLabel(solo, presenceOf(solo))) + (solo.status_message ? ` · « ${solo.status_message} »` : "")
                 : channel.kind === "channel" ? channel.topic || "Toute l'équipe" : `${others.length + 1} membres`}
             </div>
           </div>
@@ -170,10 +170,13 @@ export function Discussions() {
   const [dialog, setDialog] = useState<"dm" | "channel" | null>(null);
   const channel = useMemo(() => channels.find((c) => c.id === channelId), [channels, channelId]);
 
-  // « Message » depuis une fiche : ouvre (ou crée) la discussion privée.
+  // « Message » depuis une fiche : ouvre (ou crée) la discussion privée, une seule fois.
+  const opening = useRef<string | null>(null);
   useEffect(() => {
     const avec = params.get("avec");
-    if (avec) chat.openDm([avec]).then(async ({ id }) => { await refreshChannels(); navigate(`/discussions/${id}`, { replace: true }); });
+    if (!avec || opening.current === avec) return;
+    opening.current = avec;
+    chat.openDm([avec]).then(async ({ id }) => { await refreshChannels(); navigate(`/discussions/${id}`, { replace: true }); });
   }, [params]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sur ordinateur, on ouvre « général » par défaut.

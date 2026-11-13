@@ -10,11 +10,11 @@ const PILL: Record<Presence, string> = {
   offline: "bg-surface-2/70 text-ink-muted",
 };
 
-export function PresencePill({ p }: { p: Presence }) {
+export function PresencePill({ p, label }: { p: Presence; label?: string }) {
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${PILL[p]}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${PRESENCE_COLOR[p]} ${p === "online" ? "animate-pulse" : ""}`} />
-      {PRESENCE_LABEL[p]}
+      {label ?? PRESENCE_LABEL[p]}
     </span>
   );
 }

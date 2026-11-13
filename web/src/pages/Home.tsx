@@ -5,7 +5,7 @@ import { useSession } from "../lib/session";
 import { useLive } from "../lib/live";
 import { Avatar } from "../components/Avatar";
 import { Panel, PresencePill, SoonTag } from "../components/ui";
-import { presenceOf } from "../lib/presence";
+import { presenceLabel, presenceOf } from "../lib/presence";
 import { ActivityRow, NotifButton, useActivity } from "./Activity";
 import { useEffect } from "react";
 import { meetings, type Meeting } from "../lib/api";
@@ -112,7 +112,7 @@ export function Home() {
                   <div className="truncate text-sm font-medium">{m.name} <span className="hidden font-normal text-ink-muted sm:inline">· {m.title}</span></div>
                   <div className={`truncate text-xs ${m.now_doing ? "text-ink-soft" : "text-ink-muted"}`}>{m.now_doing || "Rien d'indiqué"}</div>
                 </div>
-                <PresencePill p={presenceOf(m, me)} />
+                <PresencePill p={presenceOf(m, me)} label={presenceLabel(m, presenceOf(m, me))} />
               </li>
             ))}
           </ul>

@@ -26,14 +26,28 @@ const AWAY_AFTER_LEAVE_MS = 5 * 60 * 1000;
 let snaps: Record<string, PresenceSnap> = {};
 export function setPresenceSnaps(next: Record<string, PresenceSnap>) { snaps = next; }
 
+/** Les agents ont leurs propres mots : au travail, en attente, bloqué. */
+export const AGENT_LABEL: Partial<Record<Presence, string>> = {
+  online: "Au travail", away: "En attente", busy: "Bloqué", offline: "Inactif", meeting: "En réunion",
+};
+export function presenceLabel(m: Member, p: Presence): string {
+  return m.kind === "agent" ? AGENT_LABEL[p] ?? PRESENCE_LABEL[p] : PRESENCE_LABEL[p];
+}
+
 export function presenceOf(m: Member, _me?: Member | null): Presence {
   const s = snaps[m.id];
+  if (m.kind === "agent") {
+    if (s?.in_meeting) return "meeting";
+    if (!s?.connected) return "offline";
+    const st = m.manual_status as string | null;
+    return st === "waiting" ? "away" : st === "blocked" ? "busy" : "online";
+  }
   let auto: Presence = "offline";
   if (s?.connected) auto = s.idle ? "away" : "online";
   else if (s?.last_seen && Date.now() - new Date(s.last_seen).getTime() < AWAY_AFTER_LEAVE_MS) auto = "away";
   if (m.manual_status === "dnd" && auto !== "offline") return "dnd";
   if (s?.in_meeting) return "meeting";
-  if (m.manual_status && auto !== "offline") return m.manual_status;
+  if (m.manual_status === "busy" && auto !== "offline") return "busy";
   return auto;
 }
 

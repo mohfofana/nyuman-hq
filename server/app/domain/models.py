@@ -158,3 +158,14 @@ class PositionHolder(Base):
     position_id: Mapped[int] = mapped_column(ForeignKey("positions.id", ondelete="CASCADE"), primary_key=True)
     member_id: Mapped[str] = mapped_column(ForeignKey("members.id"), primary_key=True)
     kind: Mapped[str] = mapped_column(String(10), default="holder")  # holder | support
+
+
+class AgentToken(Base):
+    """Clé d'accès d'un agent (on ne garde que son empreinte, jamais la clé)."""
+
+    __tablename__ = "agent_tokens"
+
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    member_id: Mapped[str] = mapped_column(ForeignKey("members.id"), index=True)
+    created_by: Mapped[str] = mapped_column(ForeignKey("members.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

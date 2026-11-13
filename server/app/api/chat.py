@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Set
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import and_, func, or_, select
+from sqlalchemy import text as sql_text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -172,6 +173,8 @@ async def open_dm(body: DmIn, me: Member = Depends(current_member), session: Asy
     found = (await session.scalars(select(Member.id).where(Member.id.in_(wanted)))).all()
     if len(found) != len(wanted) or len(wanted) < 2:
         raise HTTPException(400, "Membres inconnus")
+    # Un seul à la fois pour ce groupe de personnes (deux clics rapprochés ne créent pas deux discussions).
+    await session.execute(sql_text("select pg_advisory_xact_lock(hashtext(:k))"), {"k": "dm:" + ",".join(sorted(wanted))})
     # cherche une discussion privée avec exactement ces membres
     candidates = (await session.scalars(
         select(ChannelMember.channel_id).join(Channel).where(Channel.kind == "dm", ChannelMember.member_id == me.id))).all()

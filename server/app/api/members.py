@@ -11,6 +11,7 @@ from app.domain.models import Member
 
 router = APIRouter(prefix="/api/members", tags=["members"])
 MANUAL_STATUSES = {None, "busy", "dnd"}
+AGENT_STATUSES = {None, "working", "waiting", "blocked"}
 
 
 @router.get("", response_model=List[MemberOut])
@@ -23,7 +24,8 @@ async def list_members(session: AsyncSession = Depends(get_session)):
 async def update_me(body: MemberUpdate, me: Member = Depends(current_member),
                     session: AsyncSession = Depends(get_session)):
     data = body.model_dump(exclude_unset=True)
-    if "manual_status" in data and data["manual_status"] not in MANUAL_STATUSES:
+    allowed = AGENT_STATUSES if me.kind == "agent" else MANUAL_STATUSES
+    if "manual_status" in data and data["manual_status"] not in allowed:
         raise HTTPException(400, "Statut inconnu")
     me = await session.merge(me)
     for key, value in data.items():

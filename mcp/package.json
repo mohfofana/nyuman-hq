@@ -1,0 +1,14 @@
+{
+  "name": "nyuman-hq-mcp",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Connecteur Claude (MCP) de Nyuman HQ : les agents lisent et écrivent dans HQ.",
+  "bin": {
+    "nyuman-hq-mcp": "server.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^4.6.7"
+  }
+}
