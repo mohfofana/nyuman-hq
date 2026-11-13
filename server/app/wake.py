@@ -136,6 +136,8 @@ class Waker:
                 ids = (await s.scalars(select(ChannelMember.member_id).where(ChannelMember.channel_id == channel.id))).all()
             targets |= {m for m in ids if m in hub.agents}
         targets.discard(author.id)
+        # Un agent dont la discussion Claude est ouverte lit lui-même HQ : pas de copie lancée.
+        targets -= {a.strip() for a in settings.agent_wake_skip.split(",") if a.strip()}
         for agent in targets:
             self.pending.setdefault(agent, []).append(msg.id)
             if agent not in self.busy:

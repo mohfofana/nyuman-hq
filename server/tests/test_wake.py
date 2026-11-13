@@ -85,3 +85,16 @@ async def test_messages_rapproches_regroupes(mohamed, fake_runner):
         await mohamed.post(f"/api/channels/{dm}/messages", json={"body": t})
     await settle()
     assert len(fake_runner) <= 2  # le premier réveil, puis un seul pour les messages arrivés pendant
+
+
+async def test_agent_avec_discussion_ouverte_pas_reveille(mohamed, fake_runner, monkeypatch):
+    """Kwame a sa discussion Claude ouverte : HQ ne lance pas de copie, elle lit HQ elle-même."""
+    monkeypatch.setattr(settings, "agent_wake_skip", "kwame")
+    dm = (await mohamed.post("/api/dms", json={"member_ids": ["kwame"]})).json()["id"]
+    await mohamed.post(f"/api/channels/{dm}/messages", json={"body": "Kwame, la vue téléphone est à revoir."})
+    await settle()
+    assert fake_runner == []
+    autre = (await mohamed.post("/api/dms", json={"member_ids": ["koffi"]})).json()["id"]
+    await mohamed.post(f"/api/channels/{autre}/messages", json={"body": "Koffi, votre avis ?"})
+    await settle()
+    assert [c[0] for c in fake_runner] == ["koffi"]

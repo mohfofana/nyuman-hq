@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     agent_daily_cap: int = 30
     agent_run_timeout_s: int = 240
     agent_max_budget_usd: float = 0.25
+    # Agents dont la discussion Claude est déjà ouverte : HQ ne lance pas de copie, c'est elle qui répond.
+    agent_wake_skip: str = ""
     agent_workdir: str = ""  # dossier où tourne l'agent (sa mémoire d'équipe est liée à ce dossier)
     # Chiffres de l'app (totaux seulement, route /admin/hq-stats de nyuman-api). Clé posée par Kevin, jamais lue par Kwame.
     stats_url: str = ""  # ex. https://<api staging>/admin/hq-stats
