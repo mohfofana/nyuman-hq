@@ -1,16 +1,22 @@
-"""Membres de départ. Liste des heads provisoire (à confirmer par Mohamed)."""
+"""Membres de départ : équipe donnée par Mohamed le 13/11/2026."""
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.models import Channel, Member, Position, PositionHolder
 
 TEAM = [
-    dict(id="mohamed", name="Mohamed", kind="human", title="Fondateur", is_head=True,
-         role="Vision, décisions finales, relations partenaires."),
-    dict(id="kevin", name="Kevin", kind="human", title="CTO", is_head=True,
-         role="Technique : serveur, sécurité, mises en ligne, logique d'argent."),
-    dict(id="sullyvan", name="Chris-Sullyvan Koffi", kind="human", is_head=True,
-         title="Directeur opérationnel et administratif", role="Juridique, contrats, opérations."),
+    dict(id="mohamed", name="Mohamed", kind="human", title="Gérant et directeur général", is_head=True,
+         role="Fixer le cap, trouver l'argent, trancher, signer."),
+    dict(id="marie-sophie", name="Marie-Sophie Aka", kind="human", title="Coordinatrice générale", is_head=True,
+         role="Faire avancer les projets de toute l'entreprise, à l'heure et au budget."),
+    dict(id="abraham", name="Abraham Doumbia", kind="human", title="Responsable Croissance", is_head=True,
+         role="Faire grandir le nombre de salons actifs et de clientes qui réservent."),
+    dict(id="sullyvan", name="Sullyvan Koffi", kind="human", title="Responsable Opérations et juridique", is_head=True,
+         role="Faire tourner NYUMAN de façon fiable et légale : paiements, contrats, conformité."),
+    dict(id="carmel", name="Carmel Didi", kind="human", title="Responsable Finance", is_head=True,
+         role="Tenir l'argent juste et visible : trésorerie, marge, comptabilité."),
+    dict(id="kevin", name="Kevin Diakité", kind="human", title="Responsable Produit et technique", is_head=True,
+         role="Décider ce que l'app fait, et garantir qu'elle marche."),
     dict(id="kodjo", name="Kodjo", kind="agent", title="Produit et tech",
          role="App, serveur, back-office, builds. Seul à toucher au code de l'app."),
     dict(id="adjoua", name="Adjoua", kind="agent", title="Finance",
@@ -25,10 +31,13 @@ TEAM = [
 
 
 async def seed(session: AsyncSession) -> None:
-    existing = set((await session.scalars(select(Member.id))).all())
+    existing = {m.id: m for m in (await session.scalars(select(Member))).all()}
     for m in TEAM:
-        if m["id"] not in existing:
+        row = existing.get(m["id"])
+        if row is None:
             session.add(Member(**m))
+        else:  # noms et postes tenus à jour (le reste de la fiche appartient à la personne)
+            row.name, row.title, row.is_head = m["name"], m["title"], m.get("is_head", False)
     await session.commit()
 
 
@@ -66,8 +75,8 @@ POSITIONS = [
 
 # Appui des agents (proposition de Kwame) : un agent n'occupe jamais un poste, il appuie la personne qui le tient.
 AGENT_SUPPORT = [(9, "adjoua"), (10, "kodjo"), (1, "koffi"), (2, "mariam"), (10, "kwame")]
-# Placements validés par Mohamed le 13/11.
-HOLDERS = [(1, "mohamed"), (7, "sullyvan"), (10, "kevin")]
+# Placements validés par Mohamed le 13/11 (équipe donnée le même jour).
+HOLDERS = [(1, "mohamed"), (2, "marie-sophie"), (3, "abraham"), (7, "sullyvan"), (9, "carmel"), (10, "kevin")]
 
 
 async def seed_org(session: AsyncSession) -> None:
@@ -77,6 +86,10 @@ async def seed_org(session: AsyncSession) -> None:
         await session.flush()
         for pid, mid in AGENT_SUPPORT:
             session.add(PositionHolder(position_id=pid, member_id=mid, kind="support"))
-        for pid, mid in HOLDERS:
-            session.add(PositionHolder(position_id=pid, member_id=mid, kind="holder"))
         await session.commit()
+    # Placements validés : ajoutés s'ils manquent (sans toucher aux autres choix faits dans HQ).
+    links = {(l.position_id, l.member_id) for l in (await session.scalars(select(PositionHolder))).all()}
+    for pid, mid in HOLDERS:
+        if (pid, mid) not in links and await session.get(Member, mid) is not None:
+            session.add(PositionHolder(position_id=pid, member_id=mid, kind="holder"))
+    await session.commit()

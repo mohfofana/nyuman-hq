@@ -22,3 +22,14 @@ async def test_mettre_a_jour_sa_fiche(mohamed):
 async def test_statut_inconnu_refuse(mohamed):
     r = await mohamed.patch("/api/members/me", json={"manual_status": "vacances"})
     assert r.status_code == 400
+
+
+async def test_seed_met_a_jour_les_membres_existants():
+    from app.db import SessionLocal
+    from app.domain.models import Member
+    from app.domain.seed import seed
+    async with SessionLocal() as s:
+        (await s.get(Member, "kevin")).name = "Ancien nom"
+        await s.commit()
+        await seed(s)
+        assert (await s.get(Member, "kevin")).name == "Kevin Diakité"
