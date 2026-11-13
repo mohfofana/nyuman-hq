@@ -4,7 +4,8 @@ from app.config import settings
 SAMPLE = {"growth": {"pros_total": 12, "pros_active": 10, "pros_with_completed": 5, "new_pros_7d": 2}}
 
 
-async def test_pas_branche(mohamed):
+async def test_pas_branche(mohamed, monkeypatch):
+    monkeypatch.setattr(settings, "stats_url", "")
     r = (await mohamed.get("/api/app-stats")).json()
     assert r == {"available": False, "reason": "not_configured"}
 

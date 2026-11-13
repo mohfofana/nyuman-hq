@@ -34,7 +34,9 @@ async def app_stats(_me: Member = Depends(current_member)):
         return {"available": True, "stats": _cache["data"]}
     try:
         data = await fetch_stats()
-    except Exception:  # API injoignable ou clé refusée : on garde le dernier chiffre connu s'il existe
+    except Exception as e:  # API injoignable ou clé refusée : on garde le dernier chiffre connu s'il existe
+        code = getattr(getattr(e, "response", None), "status_code", None)
+        print(f"chiffres de l'app : échec ({code or type(e).__name__})")  # jamais la clé dans le journal
         if _cache["data"] is not None:
             return {"available": True, "stale": True, "stats": _cache["data"]}
         return {"available": False, "reason": "unreachable"}
