@@ -19,6 +19,13 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     google_client_secret: str = ""
     google_refresh_token: str = ""
+    # Réveil des agents (Claude lancé en arrière-plan quand on écrit à un agent)
+    agent_wake: bool = False
+    claude_bin: str = "claude"
+    agent_daily_cap: int = 30
+    agent_run_timeout_s: int = 240
+    agent_max_budget_usd: float = 0.5
+    agent_workdir: str = ""  # dossier où tourne l'agent (sa mémoire d'équipe est liée à ce dossier)
 
 
 settings = Settings()

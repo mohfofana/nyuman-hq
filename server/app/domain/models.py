@@ -224,3 +224,21 @@ class Task(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class AgentRun(Base):
+    """Un réveil d'agent : pourquoi, quand, combien de temps, combien ça a coûté."""
+
+    __tablename__ = "agent_runs"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    agent_id: Mapped[str] = mapped_column(ForeignKey("members.id"), index=True)
+    trigger_message_id: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    channel_id: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    triggered_by: Mapped[Optional[str]] = mapped_column(ForeignKey("members.id"), nullable=True)
+    status: Mapped[str] = mapped_column(String(12), default="queued")  # queued | running | done | failed | capped
+    model: Mapped[str] = mapped_column(String(40), default="")
+    cost_usd: Mapped[float] = mapped_column(Float, default=0)
+    duration_s: Mapped[float] = mapped_column(Float, default=0)
+    error: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)

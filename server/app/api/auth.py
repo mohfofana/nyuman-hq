@@ -99,3 +99,51 @@ async def new_agent_token(agent_id: str, me: Member = Depends(current_member), s
     session.add(AgentToken(token_hash=hash_token(token), member_id=agent.id, created_by=me.id))
     await session.commit()
     return {"agent_id": agent.id, "token": token}
+
+
+@router.post("/agents/{agent_id}/wake")
+async def wake_agent(agent_id: str, message_id: str, me: Member = Depends(current_member),
+                     session: AsyncSession = Depends(get_session)):
+    """Relancer un agent sur un message qu'il n'a pas encore traité (réservé aux heads)."""
+    from app.domain.models import Channel, ChannelMember, Message
+    from app.wake import waker
+
+    if me.kind != "human" or not me.is_head:
+        raise HTTPException(403, "Réservé aux heads")
+    agent = await session.get(Member, agent_id)
+    msg = await session.get(Message, message_id)
+    if agent is None or agent.kind != "agent" or msg is None:
+        raise HTTPException(404)
+    ch = await session.get(Channel, msg.channel_id)
+    if ch.kind == "dm" and await session.get(ChannelMember, (ch.id, agent_id)) is None:
+        raise HTTPException(400, "L'agent n'est pas dans cette discussion")
+    author = await session.get(Member, msg.author_id)
+    woken = await waker.on_message(msg, ch, author, {agent_id})
+    return {"woken": woken}
+
+
+@router.get("/agents/runs")
+async def agent_runs_summary(_me: Member = Depends(current_member), session: AsyncSession = Depends(get_session)):
+    """Compteur visible : réveils du jour, coût du mois, dernier état, par agent."""
+    from datetime import datetime, timezone
+
+    from sqlalchemy import func, select
+
+    from app.config import settings
+    from app.domain.models import AgentRun
+
+    now_ = datetime.now(timezone.utc)
+    day = now_.replace(hour=0, minute=0, second=0, microsecond=0)
+    month = day.replace(day=1)
+    out = {}
+    agents = (await session.scalars(select(Member.id).where(Member.kind == "agent"))).all()
+    for a in agents:
+        today = await session.scalar(select(func.count()).select_from(AgentRun).where(
+            AgentRun.agent_id == a, AgentRun.created_at >= day, AgentRun.status.in_(["running", "done"]))) or 0
+        cost = await session.scalar(select(func.coalesce(func.sum(AgentRun.cost_usd), 0)).where(
+            AgentRun.agent_id == a, AgentRun.created_at >= month)) or 0
+        last = await session.scalar(select(AgentRun).where(AgentRun.agent_id == a).order_by(AgentRun.created_at.desc()).limit(1))
+        out[a] = {"today": today, "cap": settings.agent_daily_cap, "month_cost_usd": round(float(cost), 3),
+                  "last_status": last.status if last else None, "last_at": last.created_at if last else None,
+                  "last_error": (last.error[:160] if last and last.status == "failed" else "")}
+    return {"enabled": settings.agent_wake, "agents": out}

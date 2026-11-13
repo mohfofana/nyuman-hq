@@ -4,14 +4,29 @@
     {
       "name": "hq-server",
       "runtimeExecutable": "/Users/melyohthesun/Documents/nyuman-hq/server/.venv/bin/uvicorn",
-      "runtimeArgs": ["app.main:app", "--port", "8030", "--reload", "--app-dir", "/Users/melyohthesun/Documents/nyuman-hq/server"],
+      "runtimeArgs": [
+        "app.main:app",
+        "--port",
+        "8030",
+        "--reload",
+        "--app-dir",
+        "/Users/melyohthesun/Documents/nyuman-hq/server"
+      ],
       "cwd": "/Users/melyohthesun/Documents/nyuman-hq/server",
-      "port": 8030
+      "port": 8030,
+      "env": {
+        "HQ_AGENT_WAKE": "true"
+      }
     },
     {
       "name": "hq-web",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "/Users/melyohthesun/Documents/nyuman-hq/web"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "/Users/melyohthesun/Documents/nyuman-hq/web"
+      ],
       "cwd": "/Users/melyohthesun/Documents/nyuman-hq/web",
       "port": 5180
     }

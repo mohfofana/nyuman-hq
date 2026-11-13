@@ -242,6 +242,7 @@ async def post_message(channel_id: str, body: MessageIn, me: Member = Depends(cu
         for f in files:
             f.message_id = msg.id
     mentioned = set(MENTION_RE.findall(text))
+    valid: Set[str] = set()
     if mentioned:
         valid = set((await session.scalars(select(Member.id).where(Member.id.in_(mentioned)))).all())
         for mid in valid - {me.id}:
@@ -249,8 +250,12 @@ async def post_message(channel_id: str, body: MessageIn, me: Member = Depends(cu
     # celui qui écrit a forcément tout lu
     await set_read(session, ch.id, me.id, msg.created_at)
     await session.commit()
-    hub.touch(me.id)
-    return await emit_message(session, ch, msg, "message.new")
+    if me.kind == "agent":
+        hub.touch(me.id)
+    data = await emit_message(session, ch, msg, "message.new")
+    from app.wake import waker
+    await waker.on_message(msg, ch, me, valid)
+    return data
 
 
 async def own_message(session: AsyncSession, message_id: str, me: Member) -> Message:

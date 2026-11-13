@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Briefcase, CalendarClock, CalendarPlus, Check, CheckCircle2, MessageSquare, Pencil, Sparkles, Target, X } from "lucide-react";
+import { Zap, Briefcase, CalendarClock, CalendarPlus, Check, CheckCircle2, MessageSquare, Pencil, Sparkles, Target, X } from "lucide-react";
 import { useSession } from "../lib/session";
 import { useLive } from "../lib/live";
 import { Avatar, TINTS, tintIndex } from "../components/Avatar";
 import { Badge, PresencePill } from "../components/ui";
 import { presenceLabel, presenceOf } from "../lib/presence";
-import type { Member } from "../lib/api";
+import { agentsApi, type AgentRunSummary, type Member } from "../lib/api";
 import { OrgChart, useOrg } from "./OrgChart";
 import { useTasks } from "./projects/useProjects";
 
@@ -67,6 +67,24 @@ function RecentDone({ memberId }: { memberId: string }) {
   );
 }
 
+function AgentWakeInfo({ agentId }: { agentId: string }) {
+  const [data, setData] = useState<AgentRunSummary | null>(null);
+  useEffect(() => { agentsApi.runs().then(setData).catch(() => setData(null)); }, [agentId]);
+  const a = data?.agents[agentId];
+  if (!data || !a) return null;
+  const failed = a.last_status === "failed";
+  return (
+    <div className="mt-1 text-sm">
+      {!data.enabled ? <span className="text-ink-muted">Réveil automatique coupé.</span> : (
+        <>
+          <div>{a.today} réveil{a.today > 1 ? "s" : ""} aujourd'hui sur {a.cap} · {a.month_cost_usd.toFixed(2).replace(".", ",")} $ ce mois-ci</div>
+          {failed && <div className="mt-1 rounded-lg bg-[#FDE6E2] px-2.5 py-1.5 text-xs text-[#B5321F]">Dernier réveil en échec : {a.last_error.includes("authenticate") ? "la connexion Claude du Mac a expiré." : a.last_error}</div>}
+        </>
+      )}
+    </div>
+  );
+}
+
 function Editable({ value, empty, onSave, canEdit }: { value: string; empty: string; onSave: (v: string) => Promise<void>; canEdit: boolean }) {
   const [editing, setEditing] = useState(false);
   const [v, setV] = useState(value);
@@ -99,6 +117,7 @@ function Fiche({ m, onClose }: { m: Member; onClose: () => void }) {
       node: <Editable value={m.now_doing} empty="Rien d'indiqué" canEdit={mine} onSave={(v) => updateMe({ now_doing: v })} /> },
     { icon: CalendarClock, tone: "bg-blue-soft text-blue", label: "Créneaux",
       node: <Editable value={m.schedule} empty={mine ? "Indiquez quand vous travaillez pour Nyuman" : "Pas encore indiqués"} canEdit={mine} onSave={(v) => updateMe({ schedule: v })} /> },
+    ...(m.kind === "agent" ? [{ icon: Zap, tone: "bg-sun-soft text-[#9A6B00]", label: "Réveils automatiques", node: <AgentWakeInfo agentId={m.id} /> }] : []),
     { icon: CheckCircle2, tone: "bg-[#E3F6EA] text-[#18794A]", label: "Terminé ces 7 derniers jours",
       node: <RecentDone memberId={m.id} /> },
   ];

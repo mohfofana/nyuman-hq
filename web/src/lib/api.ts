@@ -176,3 +176,9 @@ export const projectsApi = {
     req<Task>("/api/tasks", { method: "POST", body: JSON.stringify(d) }),
   updateTask: (id: string, d: Partial<Task>) => req<Task>(`/api/tasks/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
 };
+
+export type AgentRunSummary = {
+  enabled: boolean;
+  agents: Record<string, { today: number; cap: number; month_cost_usd: number; last_status: string | null; last_at: string | null; last_error: string }>;
+};
+export const agentsApi = { runs: () => req<AgentRunSummary>("/api/auth/agents/runs") };
