@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { LogOut } from "lucide-react";
 import { useSession } from "../lib/session";
+import { useLive } from "../lib/live";
 import { Avatar } from "./Avatar";
 import { PRESENCE_COLOR, PRESENCE_LABEL, presenceOf, type Presence } from "../lib/presence";
 
@@ -13,6 +14,7 @@ import type { Member } from "../lib/api";
 
 export function StatusMenu() {
   const { me, updateMe, logout } = useSession();
+  useLive();
   const [open, setOpen] = useState(false);
   const [msg, setMsg] = useState(me?.status_message ?? "");
   const ref = useRef<HTMLDivElement>(null);

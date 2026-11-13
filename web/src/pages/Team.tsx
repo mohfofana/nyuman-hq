@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { CalendarClock, CalendarPlus, Check, CheckCircle2, MessageSquare, Pencil, Sparkles, Target, X } from "lucide-react";
 import { useSession } from "../lib/session";
+import { useLive } from "../lib/live";
 import { Avatar, TINTS, tintIndex } from "../components/Avatar";
 import { Badge, PresencePill } from "../components/ui";
 import { presenceOf } from "../lib/presence";
@@ -127,6 +128,7 @@ const FILTERS = [
 
 export function Team() {
   const { members, me } = useSession();
+  useLive();
   const [openId, setOpenId] = useState<string | null>(null);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("all");
   const shown = members.filter((m) => filter === "all" || m.kind === filter);

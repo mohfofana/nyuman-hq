@@ -8,6 +8,7 @@ type Ctx = {
   login: (id: string) => Promise<void>;
   logout: () => Promise<void>;
   updateMe: (d: Partial<Member>) => Promise<void>;
+  patchMember: (m: Member) => void;
 };
 
 const SessionCtx = createContext<Ctx>(null!);
@@ -31,6 +32,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     login: async (id) => { setMe(await api.devLogin(id)); },
     logout: async () => { await api.logout(); setMe(null); },
     updateMe: async (d) => { setMe(await api.updateMe(d)); await refresh(); },
+    patchMember: (m) => {
+      setMembers((list) => list.map((x) => (x.id === m.id ? m : x)));
+      setMe((cur) => (cur && cur.id === m.id ? m : cur));
+    },
   };
   return <SessionCtx.Provider value={value}>{children}</SessionCtx.Provider>;
 }

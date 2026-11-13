@@ -2,9 +2,11 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Bell, CalendarPlus, Check, FilePlus2, MessageSquarePlus, Pencil, Target } from "lucide-react";
 import { useSession } from "../lib/session";
+import { useLive } from "../lib/live";
 import { Avatar } from "../components/Avatar";
 import { Panel, PresencePill, SoonTag } from "../components/ui";
 import { presenceOf } from "../lib/presence";
+import { ActivityRow, NotifButton, useActivity } from "./Activity";
 
 function greeting() {
   const h = new Date().getHours();
@@ -40,13 +42,15 @@ function TodayCard() {
 }
 
 const SHORTCUTS = [
-  { icon: MessageSquarePlus, label: "Nouvelle discussion", to: "/discussions", tone: "bg-accent-soft text-accent" },
+  { icon: MessageSquarePlus, label: "Ouvrir les discussions", to: "/discussions", tone: "bg-accent-soft text-accent", ready: true },
   { icon: CalendarPlus, label: "Planifier une réunion", to: "/agenda", tone: "bg-blue-soft text-blue" },
   { icon: FilePlus2, label: "Nouvelle page projet", to: "/projets", tone: "bg-sun-soft text-[#9A6B00]" },
 ];
 
 export function Home() {
   const { me, members } = useSession();
+  useLive();
+  const activity = useActivity();
   if (!me) return null;
   const date = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
   const others = members.filter((m) => m.id !== me.id);
@@ -96,20 +100,25 @@ export function Home() {
         <div className="space-y-5">
           <Panel title="Raccourcis">
             <div className="grid gap-2">
-              {SHORTCUTS.map(({ icon: Icon, label, to, tone }) => (
+              {SHORTCUTS.map(({ icon: Icon, label, to, tone, ready }: any) => (
                 <Link key={label} to={to} className="group flex items-center gap-3 rounded-2xl border border-line px-3 py-2.5 transition hover:border-accent/40 hover:bg-surface">
                   <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${tone}`}><Icon size={18} /></span>
                   <span className="flex-1 text-sm font-medium">{label}</span>
-                  <SoonTag />
+                  {!ready && <SoonTag />}
                 </Link>
               ))}
             </div>
           </Panel>
-          <Panel title="Activité" action={<SoonTag>Avec la messagerie</SoonTag>}>
-            <div className="flex items-center gap-3 rounded-2xl bg-surface p-4">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sun-soft text-[#9A6B00]"><Bell size={18} /></span>
-              <p className="text-sm text-ink-soft">Vos mentions, réponses et réactions apparaîtront ici.</p>
-            </div>
+          <Panel title="Activité" action={<Link to="/activite" className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline">Tout voir <ArrowRight size={14} /></Link>}>
+            <NotifButton />
+            {activity && activity.length > 0 ? (
+              <div className="-mx-2 mt-1">{activity.slice(0, 4).map((it) => <ActivityRow key={it.message.id} item={it} members={members} />)}</div>
+            ) : (
+              <div className="mt-2 flex items-center gap-3 rounded-2xl bg-surface p-4">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sun-soft text-[#9A6B00]"><Bell size={18} /></span>
+                <p className="text-sm text-ink-soft">Vos mentions et réponses apparaîtront ici.</p>
+              </div>
+            )}
           </Panel>
         </div>
       </div>

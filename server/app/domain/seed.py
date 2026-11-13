@@ -2,7 +2,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.models import Member
+from app.domain.models import Channel, Member
 
 TEAM = [
     dict(id="mohamed", name="Mohamed", kind="human", title="Fondateur", is_head=True,
@@ -29,4 +29,20 @@ async def seed(session: AsyncSession) -> None:
     for m in TEAM:
         if m["id"] not in existing:
             session.add(Member(**m))
+    await session.commit()
+
+
+CHANNELS = [
+    dict(id="general", name="général", topic="Tout ce qui concerne toute l'équipe."),
+    dict(id="tech", name="tech", topic="App, serveur, builds, bugs."),
+    dict(id="finance", name="finance", topic="Frais, acomptes, trésorerie."),
+    dict(id="operations", name="opérations", topic="Salons, partenaires, terrain."),
+]
+
+
+async def seed_channels(session: AsyncSession) -> None:
+    existing = set((await session.scalars(select(Channel.id))).all())
+    for c in CHANNELS:
+        if c["id"] not in existing:
+            session.add(Channel(kind="channel", created_by="mohamed", **c))
     await session.commit()

@@ -3,10 +3,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, members
+from app.api import auth, chat, files, live, members
 from app.config import settings
 from app.db import SessionLocal, create_schema
-from app.domain.seed import seed
+from app.domain.seed import seed, seed_channels
 
 
 @asynccontextmanager
@@ -14,6 +14,7 @@ async def lifespan(_app: FastAPI):
     await create_schema()
     async with SessionLocal() as session:
         await seed(session)
+        await seed_channels(session)
     yield
 
 
@@ -27,6 +28,9 @@ app.add_middleware(
 )
 app.include_router(auth.router)
 app.include_router(members.router)
+app.include_router(chat.router)
+app.include_router(files.router)
+app.include_router(live.router)
 
 
 @app.get("/api/health")

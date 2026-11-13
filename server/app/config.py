@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     # En local, on choisit son profil sans mot de passe. À couper en ligne.
     dev_login: bool = True
     cors_origins: str = "http://localhost:5180"
+    # Dossier des fichiers envoyés (en ligne : stockage S3 plus tard).
+    upload_dir: str = "uploads"
+    max_upload_mb: int = 25
 
 
 settings = Settings()

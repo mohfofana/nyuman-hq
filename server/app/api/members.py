@@ -29,4 +29,7 @@ async def update_me(body: MemberUpdate, me: Member = Depends(current_member),
     for key, value in data.items():
         setattr(me, key, value)
     await session.commit()
+    from app.realtime import hub
+    from app.api.schemas import MemberOut as _M
+    await hub.broadcast({"type": "member.updated", "member": _M.model_validate(me).model_dump()})
     return me

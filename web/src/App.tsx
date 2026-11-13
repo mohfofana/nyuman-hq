@@ -1,11 +1,14 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import { CalendarDays, FolderOpen, LayoutList, MessagesSquare } from "lucide-react";
+import { CalendarDays, FolderOpen, LayoutList } from "lucide-react";
 import { useSession } from "./lib/session";
 import { Shell } from "./components/Shell";
 import { Login } from "./pages/Login";
 import { Home } from "./pages/Home";
 import { Team } from "./pages/Team";
 import { Preview } from "./pages/Preview";
+import { Discussions } from "./pages/discussions/Discussions";
+import { Activity } from "./pages/Activity";
+import { SearchPage } from "./pages/SearchPage";
 
 export default function App() {
   const { me, loading } = useSession();
@@ -15,9 +18,10 @@ export default function App() {
     <Routes>
       <Route element={<Shell />}>
         <Route path="/accueil" element={<Home />} />
-        <Route path="/discussions" element={<Preview kind="chat" icon={MessagesSquare} title="Discussions" soon="Prochaine étape"
-          text="Toute l'équipe au même endroit, humains et agents."
-          bullets={["Canaux par sujet et messages privés", "Fils, mentions @ et réactions", "Fichiers, images et recherche"]} />} />
+        <Route path="/discussions" element={<Discussions />} />
+        <Route path="/discussions/:channelId" element={<Discussions />} />
+        <Route path="/activite" element={<Activity />} />
+        <Route path="/recherche" element={<SearchPage />} />
         <Route path="/agenda" element={<Preview kind="calendar" icon={CalendarDays} title="Agenda" soon="Après la messagerie" tone="blue"
           text="Les réunions et échéances de toute l'équipe."
           bullets={["Lien Google Meet créé tout seul", "Rappel avant chaque réunion", "Synchronisé avec Google Agenda"]} />} />
