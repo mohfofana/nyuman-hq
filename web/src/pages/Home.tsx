@@ -10,6 +10,8 @@ import { ActivityRow, NotifButton, useActivity } from "./Activity";
 import { useEffect } from "react";
 import { meetings, type Meeting } from "../lib/api";
 import { MeetingCard } from "../components/MeetingCard";
+import { useTasks } from "./projects/useProjects";
+import { dueLabel } from "./projects/meta";
 
 function greeting() {
   const h = new Date().getHours();
@@ -30,6 +32,30 @@ function Upcoming() {
         </Link>
       )}
       <div className="space-y-2">{list?.slice(0, 3).map((m) => <MeetingCard key={m.id} id={m.id} initial={m} />)}</div>
+    </Panel>
+  );
+}
+
+function MyTasksPanel() {
+  const { me } = useSession();
+  const { tasks, patch } = useTasks(me ? { assignee_id: me.id, status: "todo,doing,review" } : null);
+  if (!tasks) return null;
+  const sorted = [...tasks].sort((a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"));
+  return (
+    <Panel title="Mes tâches" action={<Link to="/projets" className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline">Tout voir <ArrowRight size={14} /></Link>}>
+      {!sorted.length && <p className="rounded-2xl bg-surface p-4 text-sm text-ink-soft">Rien en attente. Les tâches qu'on vous confie arriveront ici.</p>}
+      <ul className="divide-y divide-line">
+        {sorted.slice(0, 5).map((t) => {
+          const due = dueLabel(t);
+          return (
+            <li key={t.id} className="flex items-center gap-3 py-2.5">
+              <button onClick={() => patch(t.id, { status: "done" })} aria-label="Terminer" className="h-5 w-5 shrink-0 rounded-full border-2 border-ink-muted/40 transition hover:border-online hover:bg-[#E3F6EA]" />
+              <Link to={`/projets/${t.project_id}`} className="min-w-0 flex-1 truncate text-sm font-medium hover:text-accent">{t.title}</Link>
+              {due && <span className={`text-xs ${due.tone}`}>{due.text}</span>}
+            </li>
+          );
+        })}
+      </ul>
     </Panel>
   );
 }
@@ -65,7 +91,7 @@ function TodayCard() {
 const SHORTCUTS = [
   { icon: MessageSquarePlus, label: "Ouvrir les discussions", to: "/discussions", tone: "bg-accent-soft text-accent", ready: true },
   { icon: CalendarPlus, label: "Planifier une réunion", to: "/agenda?nouvelle=1", tone: "bg-blue-soft text-blue", ready: true },
-  { icon: FilePlus2, label: "Nouvelle page projet", to: "/projets", tone: "bg-sun-soft text-[#9A6B00]" },
+  { icon: FilePlus2, label: "Ouvrir les projets", to: "/projets", tone: "bg-sun-soft text-[#9A6B00]", ready: true },
 ];
 
 export function Home() {
@@ -103,6 +129,8 @@ export function Home() {
       </section>
 
       <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
+        <div className="space-y-5">
+        <MyTasksPanel />
         <Panel title="L'équipe en ce moment" action={<Link to="/equipe" className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline">Tout voir <ArrowRight size={14} /></Link>}>
           <ul className="divide-y divide-line">
             {others.map((m) => (
@@ -117,6 +145,7 @@ export function Home() {
             ))}
           </ul>
         </Panel>
+        </div>
 
         <div className="space-y-5">
           <Upcoming />

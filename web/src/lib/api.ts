@@ -145,3 +145,34 @@ export const orgApi = {
   set: (id: number, holder_ids: string[], support_ids: string[]) =>
     req<Org>(`/api/org/positions/${id}`, { method: "PUT", body: JSON.stringify({ holder_ids, support_ids }) }),
 };
+
+export type TaskStatus = "todo" | "doing" | "review" | "done";
+export type Project = {
+  id: string; name: string; icon: string; description: string; department: string; owner_id: string | null;
+  created_by: string; archived: boolean; created_at: string; counts: Partial<Record<TaskStatus, number>>;
+};
+export type PageMeta = {
+  id: string; project_id: string; parent_id: string | null; title: string; icon: string; position: number;
+  archived: boolean; created_by: string; updated_by: string | null; created_at: string; updated_at: string;
+};
+export type PageFull = PageMeta & { content: string; text: string };
+export type Task = {
+  id: string; project_id: string; title: string; description: string; status: TaskStatus; priority: "low" | "normal" | "high";
+  assignee_id: string | null; due_date: string | null; page_id: string | null; position: number; archived: boolean;
+  created_by: string; updated_by: string | null; created_at: string; updated_at: string; completed_at: string | null;
+};
+
+export const projectsApi = {
+  list: () => req<Project[]>("/api/projects"),
+  create: (d: Partial<Project>) => req<Project>("/api/projects", { method: "POST", body: JSON.stringify(d) }),
+  update: (id: string, d: Partial<Project>) => req<Project>(`/api/projects/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
+  pages: (id: string) => req<PageMeta[]>(`/api/projects/${id}/pages`),
+  createPage: (id: string, d: { title?: string; parent_id?: string | null; icon?: string }) =>
+    req<PageFull>(`/api/projects/${id}/pages`, { method: "POST", body: JSON.stringify(d) }),
+  page: (id: string) => req<PageFull>(`/api/pages/${id}`),
+  updatePage: (id: string, d: Partial<PageFull>) => req<PageFull>(`/api/pages/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
+  tasks: (params: Record<string, string>) => req<Task[]>(`/api/tasks?${new URLSearchParams(params)}`),
+  createTask: (d: Partial<Task> & { project_id: string; title: string }) =>
+    req<Task>("/api/tasks", { method: "POST", body: JSON.stringify(d) }),
+  updateTask: (id: string, d: Partial<Task>) => req<Task>(`/api/tasks/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
+};

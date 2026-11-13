@@ -8,6 +8,7 @@ import { Badge, PresencePill } from "../components/ui";
 import { presenceLabel, presenceOf } from "../lib/presence";
 import type { Member } from "../lib/api";
 import { OrgChart, useOrg } from "./OrgChart";
+import { useTasks } from "./projects/useProjects";
 
 function usePosts(memberId: string) {
   const { org } = useOrg();
@@ -53,6 +54,19 @@ function Card({ m, onOpen }: { m: Member; onOpen: () => void }) {
   );
 }
 
+function RecentDone({ memberId }: { memberId: string }) {
+  const { tasks } = useTasks({ assignee_id: memberId, done_since_days: "7" });
+  const { tasks: current } = useTasks({ assignee_id: memberId, status: "doing,review" });
+  if (!tasks || !current) return null;
+  return (
+    <div className="mt-1 space-y-1 text-sm">
+      {current.map((t) => <div key={t.id} className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-blue" />{t.title} <span className="text-xs text-ink-muted">· en cours</span></div>)}
+      {tasks.map((t) => <div key={t.id} className="flex items-center gap-2 text-ink-soft"><span className="text-online">✓</span>{t.title}</div>)}
+      {!tasks.length && !current.length && <span className="text-ink-muted">Rien pour l'instant.</span>}
+    </div>
+  );
+}
+
 function Editable({ value, empty, onSave, canEdit }: { value: string; empty: string; onSave: (v: string) => Promise<void>; canEdit: boolean }) {
   const [editing, setEditing] = useState(false);
   const [v, setV] = useState(value);
@@ -85,8 +99,8 @@ function Fiche({ m, onClose }: { m: Member; onClose: () => void }) {
       node: <Editable value={m.now_doing} empty="Rien d'indiqué" canEdit={mine} onSave={(v) => updateMe({ now_doing: v })} /> },
     { icon: CalendarClock, tone: "bg-blue-soft text-blue", label: "Créneaux",
       node: <Editable value={m.schedule} empty={mine ? "Indiquez quand vous travaillez pour Nyuman" : "Pas encore indiqués"} canEdit={mine} onSave={(v) => updateMe({ schedule: v })} /> },
-    { icon: CheckCircle2, tone: "bg-[#E3F6EA] text-[#18794A]", label: "Terminé récemment",
-      node: <div className="mt-1 text-sm text-ink-muted">Apparaîtra ici avec le suivi de projet.</div> },
+    { icon: CheckCircle2, tone: "bg-[#E3F6EA] text-[#18794A]", label: "Terminé ces 7 derniers jours",
+      node: <RecentDone memberId={m.id} /> },
   ];
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-ink/30 backdrop-blur-[3px]" onClick={onClose}>

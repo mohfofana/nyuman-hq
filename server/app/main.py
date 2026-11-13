@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, chat, files, live, meetings, members, org
+from app.api import auth, chat, files, live, meetings, members, org, projects
 from app.config import settings
 from app.db import SessionLocal, create_schema
 from app.domain.seed import seed, seed_channels, seed_org
@@ -41,6 +41,7 @@ app.include_router(files.router)
 app.include_router(live.router)
 app.include_router(meetings.router)
 app.include_router(org.router)
+app.include_router(projects.router)
 
 
 @app.get("/api/health")

@@ -217,4 +217,118 @@ tool("hq_planifier_reunion", "Planifie une réunion d'équipe avec lien Jitsi et
     return `Réunion planifiée : ${m.title} · ${m.link} [id ${m.id}]`;
   });
 
+// ---------- projets, tâches, pages ----------
+const STATUTS = { a_faire: "todo", en_cours: "doing", en_revue: "review", termine: "done" };
+const STATUT_FR = Object.fromEntries(Object.entries(STATUTS).map(([k, v]) => [v, k]));
+
+async function projectId(ref) {
+  const list = await api("GET", "/api/projects");
+  const r = ref.trim().toLowerCase();
+  const hit = list.find((p) => p.id === ref || p.name.toLowerCase() === r) || list.find((p) => p.name.toLowerCase().includes(r));
+  if (!hit) throw new Error(`Projet introuvable : « ${ref} ». Projets : ${list.map((p) => p.name).join(", ") || "aucun"}`);
+  return hit;
+}
+async function fmtTasks(tasks) {
+  const list = await members();
+  const projects = await api("GET", "/api/projects");
+  return tasks.map((t) => `[${t.id}] ${t.title} — ${STATUT_FR[t.status]} · ${t.assignee_id ? nameOf(list, t.assignee_id) : "personne"}${t.due_date ? " · échéance " + t.due_date : ""}${t.priority === "high" ? " · priorité haute" : ""} · ${projects.find((p) => p.id === t.project_id)?.name ?? ""}`).join("\n") || "(aucune tâche)";
+}
+/** Texte simple → paragraphes de l'éditeur de pages (une ligne « - » = puce, « [ ] » = case à cocher). */
+function toNodes(texte) {
+  const nodes = [];
+  const para = (t) => ({ type: "paragraph", content: t ? [{ type: "text", text: t }] : [] });
+  const push = (listType, item) => {
+    const last = nodes[nodes.length - 1];
+    if (last?.type === listType) last.content.push(item);
+    else nodes.push({ type: listType, content: [item] });
+  };
+  for (const line of texte.split("\n")) {
+    const t = line.trimEnd();
+    if (!t) continue;
+    const box = t.match(/^\s*\[( |x)\]\s+(.*)$/i);
+    const bullet = t.match(/^\s*[-•]\s+(.*)$/);
+    const h = t.match(/^(#{1,2})\s+(.*)$/);
+    if (box) push("taskList", { type: "taskItem", attrs: { checked: box[1].toLowerCase() === "x" }, content: [para(box[2])] });
+    else if (bullet) push("bulletList", { type: "listItem", content: [para(bullet[1])] });
+    else if (h) nodes.push({ type: "heading", attrs: { level: h[1].length }, content: [{ type: "text", text: h[2] }] });
+    else nodes.push(para(t));
+  }
+  return nodes;
+}
+
+tool("hq_projets", "Liste les projets (façon Notion) avec le nombre de tâches par statut.", {}, async () => {
+  const list = await api("GET", "/api/projects");
+  return list.map((p) => `${p.icon} ${p.name} [id ${p.id}]${p.department ? " · " + p.department : ""} — ${Object.entries(p.counts).map(([k, v]) => STATUT_FR[k] + " " + v).join(", ") || "aucune tâche"}`).join("\n") || "Aucun projet.";
+});
+
+tool("hq_taches", "Liste des tâches : les vôtres par défaut, ou celles d'un projet / d'une personne.",
+  { projet: z.string().optional(), personne: z.string().optional().describe("identifiant, ex. kevin ; « moi » par défaut"), statut: z.enum(["a_faire", "en_cours", "en_revue", "termine"]).optional() },
+  async ({ projet, personne, statut }) => {
+    const params = new URLSearchParams();
+    if (projet) params.set("project_id", (await projectId(projet)).id);
+    if (personne || !projet) params.set("assignee_id", (personne || agent).toLowerCase());
+    if (statut) params.set("status", STATUTS[statut]);
+    return fmtTasks(await api("GET", `/api/tasks?${params}`));
+  });
+
+tool("hq_creer_tache", "Crée une tâche dans un projet, avec responsable et échéance si besoin.",
+  {
+    projet: z.string(), titre: z.string().min(1).max(300), responsable: z.string().optional().describe("identifiant, ex. kevin"),
+    echeance: z.string().optional().describe("AAAA-MM-JJ"), priorite: z.enum(["basse", "normale", "haute"]).optional(), description: z.string().optional(),
+  },
+  async ({ projet, titre, responsable, echeance, priorite, description }) => {
+    const p = await projectId(projet);
+    const t = await api("POST", "/api/tasks", {
+      project_id: p.id, title: titre, assignee_id: responsable?.toLowerCase() ?? null, due_date: echeance ?? null,
+      priority: { basse: "low", normale: "normal", haute: "high" }[priorite ?? "normale"], description: description ?? "",
+    });
+    return `Tâche créée [${t.id}] dans ${p.name}.`;
+  });
+
+tool("hq_maj_tache", "Met à jour une tâche : statut, responsable, échéance, titre ou description.",
+  {
+    tache_id: z.string(), statut: z.enum(["a_faire", "en_cours", "en_revue", "termine"]).optional(), responsable: z.string().optional(),
+    echeance: z.string().optional().describe("AAAA-MM-JJ, ou « aucune »"), titre: z.string().optional(), description: z.string().optional(),
+  },
+  async ({ tache_id, statut, responsable, echeance, titre, description }) => {
+    const d = {};
+    if (statut) d.status = STATUTS[statut];
+    if (responsable) d.assignee_id = responsable.toLowerCase() === "personne" ? null : responsable.toLowerCase();
+    if (echeance) d.due_date = echeance === "aucune" ? null : echeance;
+    if (titre) d.title = titre;
+    if (description !== undefined) d.description = description;
+    const t = await api("PATCH", `/api/tasks/${tache_id}`, d);
+    return `Tâche mise à jour : ${t.title} — ${STATUT_FR[t.status]}.`;
+  });
+
+tool("hq_pages", "Liste les pages d'un projet.", { projet: z.string() }, async ({ projet }) => {
+  const p = await projectId(projet);
+  const pages = await api("GET", `/api/projects/${p.id}/pages`);
+  return pages.map((x) => `${x.icon} ${x.title || "Sans titre"} [id ${x.id}]${x.parent_id ? " (sous-page)" : ""}`).join("\n") || "Aucune page.";
+});
+
+tool("hq_lire_page", "Lit le texte d'une page de projet.", { page_id: z.string() }, async ({ page_id }) => {
+  const p = await api("GET", `/api/pages/${page_id}`);
+  const list = await members();
+  return `${p.icon} ${p.title || "Sans titre"} (modifiée par ${nameOf(list, p.updated_by)} le ${p.updated_at})\n\n${p.text || "(page vide)"}`;
+});
+
+tool("hq_ecrire_page", "Crée une page dans un projet, ou ajoute du texte à la fin d'une page existante. Lignes « - » = puces, « [ ] » = cases à cocher, « # » = titre.",
+  { projet: z.string().optional(), page_id: z.string().optional(), titre: z.string().optional(), texte: z.string().min(1) },
+  async ({ projet, page_id, titre, texte }) => {
+    if (!page_id) {
+      if (!projet) throw new Error("Indiquez le projet (pour une nouvelle page) ou page_id (pour ajouter à une page).");
+      const p = await projectId(projet);
+      const doc = { type: "doc", content: toNodes(texte) };
+      const page = await api("POST", `/api/projects/${p.id}/pages`, { title: titre ?? "", content: JSON.stringify(doc), text: texte });
+      return `Page créée [${page.id}] dans ${p.name}.`;
+    }
+    const page = await api("GET", `/api/pages/${page_id}`);
+    let doc = { type: "doc", content: [] };
+    try { if (page.content) doc = JSON.parse(page.content); } catch { /* page illisible : on repart d'un document vide */ }
+    doc.content = [...(doc.content || []), ...toNodes(texte)];
+    await api("PATCH", `/api/pages/${page_id}`, { content: JSON.stringify(doc), text: (page.text ? page.text + "\n" : "") + texte, ...(titre ? { title: titre } : {}) });
+    return "Texte ajouté à la page.";
+  });
+
 await server.connect(new StdioServerTransport());

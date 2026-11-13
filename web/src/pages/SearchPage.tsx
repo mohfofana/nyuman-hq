@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Hash, Search } from "lucide-react";
-import { chat, type Message } from "../lib/api";
+import { chat, type Message, type PageMeta, type Task } from "../lib/api";
 import { useSession } from "../lib/session";
 import { useLive } from "../lib/live";
 import { Avatar } from "../components/Avatar";
@@ -20,7 +20,14 @@ export function SearchPage() {
   const { me, members } = useSession();
   const { channels } = useLive();
   const [results, setResults] = useState<Message[] | null>(null);
-  useEffect(() => { setResults(null); if (q.trim().length >= 2) chat.search(q).then(setResults); else setResults([]); }, [q]);
+  const [work, setWork] = useState<{ pages: PageMeta[]; tasks: Task[] }>({ pages: [], tasks: [] });
+  useEffect(() => {
+    setResults(null);
+    if (q.trim().length >= 2) {
+      chat.search(q).then(setResults);
+      fetch(`/api/projects-search?q=${encodeURIComponent(q)}`, { credentials: "include" }).then((r) => r.json()).then(setWork);
+    } else setResults([]);
+  }, [q]);
   const people = q ? members.filter((m) => m.name.toLowerCase().includes(q.toLowerCase())) : [];
   const chans = q ? channels.filter((c) => c.kind === "channel" && c.name.includes(q.toLowerCase())) : [];
   if (!me) return null;
@@ -41,6 +48,23 @@ export function SearchPage() {
             </Link>
           ))}
         </div>
+      )}
+      {(work.pages.length > 0 || work.tasks.length > 0) && (
+        <>
+          <h2 className="mt-8 text-sm font-semibold text-ink-soft">Projets · {work.pages.length + work.tasks.length}</h2>
+          <div className="mt-3 space-y-2">
+            {work.pages.map((p) => (
+              <Link key={p.id} to={`/projets/${p.project_id}/page/${p.id}`} className="flex items-center gap-3 rounded-2xl border border-line bg-white p-4 shadow-sm hover:border-accent/40">
+                <span className="text-xl">{p.icon}</span><span className="font-medium"><Highlight text={p.title || "Sans titre"} q={q} /></span><span className="text-xs text-ink-muted">page</span>
+              </Link>
+            ))}
+            {work.tasks.map((t) => (
+              <Link key={t.id} to={`/projets/${t.project_id}`} className="flex items-center gap-3 rounded-2xl border border-line bg-white p-4 shadow-sm hover:border-accent/40">
+                <span className={`h-2.5 w-2.5 rounded-full ${t.status === "done" ? "bg-online" : "bg-accent"}`} /><span className="font-medium"><Highlight text={t.title} q={q} /></span><span className="text-xs text-ink-muted">tâche</span>
+              </Link>
+            ))}
+          </div>
+        </>
       )}
       <h2 className="mt-8 text-sm font-semibold text-ink-soft">Messages{results ? ` · ${results.length}` : ""}</h2>
       <div className="mt-3 space-y-2">

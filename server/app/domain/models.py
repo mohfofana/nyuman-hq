@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -169,3 +169,58 @@ class AgentToken(Base):
     member_id: Mapped[str] = mapped_column(ForeignKey("members.id"), index=True)
     created_by: Mapped[str] = mapped_column(ForeignKey("members.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Project(Base):
+    """Un projet (façon Notion) : ses pages et ses tâches."""
+
+    __tablename__ = "projects"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    name: Mapped[str] = mapped_column(String(120))
+    icon: Mapped[str] = mapped_column(String(16), default="📁")
+    description: Mapped[str] = mapped_column(Text, default="")
+    department: Mapped[str] = mapped_column(String(60), default="")
+    owner_id: Mapped[Optional[str]] = mapped_column(ForeignKey("members.id"), nullable=True)
+    created_by: Mapped[str] = mapped_column(ForeignKey("members.id"))
+    archived: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Page(Base):
+    __tablename__ = "pages"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    parent_id: Mapped[Optional[str]] = mapped_column(ForeignKey("pages.id"), nullable=True)
+    title: Mapped[str] = mapped_column(String(200), default="")
+    icon: Mapped[str] = mapped_column(String(16), default="📄")
+    content: Mapped[str] = mapped_column(Text, default="")  # document de l'éditeur (JSON)
+    text: Mapped[str] = mapped_column(Text, default="")  # texte brut, pour la recherche et les agents
+    position: Mapped[float] = mapped_column(Float, default=0)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_by: Mapped[str] = mapped_column(ForeignKey("members.id"))
+    updated_by: Mapped[Optional[str]] = mapped_column(ForeignKey("members.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(300))
+    description: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(12), default="todo")  # todo | doing | review | done
+    priority: Mapped[str] = mapped_column(String(8), default="normal")  # low | normal | high
+    assignee_id: Mapped[Optional[str]] = mapped_column(ForeignKey("members.id"), nullable=True, index=True)
+    due_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    page_id: Mapped[Optional[str]] = mapped_column(ForeignKey("pages.id"), nullable=True)
+    position: Mapped[float] = mapped_column(Float, default=0)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_by: Mapped[str] = mapped_column(ForeignKey("members.id"))
+    updated_by: Mapped[Optional[str]] = mapped_column(ForeignKey("members.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
