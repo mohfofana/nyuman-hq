@@ -1,23 +1,28 @@
 @import "tailwindcss";
 
-/* Jetons repris de l'app Nyuman (via nyuman-dashboard-ui).
-   Règle HQ : blanc et gris clairs partout, orange seulement sur l'essentiel,
-   jamais de marron en grande surface. */
+/* Jetons de l'app Nyuman + palette officielle (orange, jaune, bleu).
+   Orange = marque et actions ; autres couleurs = petites touches (avatars, statuts, badges).
+   Jamais de marron en grande surface. */
 @theme {
   --color-bg: #FFFFFF;
-  --color-surface: #F7F7F8;
-  --color-surface-2: #EFEFF1;
-  --color-line: #E7E7EA;
-  --color-ink: #211B16;
-  --color-ink-soft: #6B6B73;
-  --color-ink-muted: #9A9AA2;
+  --color-surface: #F7F6F4;
+  --color-surface-2: #EFEDEA;
+  --color-line: #ECEAE6;
+  --color-ink: #1E1A17;
+  --color-ink-soft: #66615B;
+  --color-ink-muted: #9B968F;
   --color-accent: #BC600D;
-  --color-accent-hover: #8F4A0B;
-  --color-accent-soft: #FBF1E8;
-  --color-online: #2E9E5B;
-  --color-away: #E0A100;
-  --color-busy: #D2412C;
-  --color-offline: #B5B5BC;
+  --color-accent-bright: #D9731A;
+  --color-accent-hover: #A0520B;
+  --color-accent-soft: #FDF0E4;
+  --color-sun: #FFC44F;
+  --color-sun-soft: #FFF4D6;
+  --color-blue: #094D92;
+  --color-blue-soft: #E3EDF8;
+  --color-online: #22A55B;
+  --color-away: #F2B200;
+  --color-busy: #E0442E;
+  --color-offline: #BDBAB5;
   --font-sans: "Work Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -29,3 +34,4 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
+.logo-white { filter: brightness(0) invert(1); }

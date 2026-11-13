@@ -28,7 +28,7 @@ export function StatusMenu() {
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpen(!open)} aria-label="Mon statut" className="rounded-full">
-        <Avatar member={me} presence={presence} size="sm" />
+        <Avatar member={me} presence={presence} size="sm" ring />
       </button>
       {open && (
         <div className="absolute right-0 top-11 z-30 w-72 rounded-2xl border border-line bg-white p-3 shadow-lg">

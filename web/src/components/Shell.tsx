@@ -14,11 +14,13 @@ export const NAV = [
 function NavItem({ to, label, icon: Icon, mobile }: (typeof NAV)[number] & { mobile?: boolean }) {
   return (
     <NavLink to={to} className={({ isActive }) =>
-      `group flex flex-col items-center gap-1 rounded-xl ${mobile ? "flex-1 py-1.5" : "w-16 py-2"} text-[11px] font-medium transition ${
+      `group relative flex flex-col items-center gap-1 ${mobile ? "flex-1 py-2" : "w-full py-2.5"} text-[11px] font-medium transition ${
         isActive ? "text-accent" : "text-ink-soft hover:text-ink"}`}>
       {({ isActive }) => (
         <>
-          <span className={`flex h-8 w-10 items-center justify-center rounded-lg ${isActive ? "bg-accent-soft" : "group-hover:bg-surface"}`}>
+          {!mobile && isActive && <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-accent" />}
+          {mobile && isActive && <span className="absolute left-1/2 top-0 h-1 w-8 -translate-x-1/2 rounded-b-full bg-accent" />}
+          <span className={`flex h-9 w-11 items-center justify-center rounded-xl transition ${isActive ? "bg-accent text-white shadow-sm shadow-accent/30" : "group-hover:bg-surface-2"}`}>
             <Icon size={20} strokeWidth={isActive ? 2.2 : 1.8} />
           </span>
           {label}
@@ -30,26 +32,26 @@ function NavItem({ to, label, icon: Icon, mobile }: (typeof NAV)[number] & { mob
 
 export function Shell() {
   return (
-    <div className="flex h-full flex-col">
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line px-4">
-        <div className="flex items-center gap-2">
-          <img src="/logo-mark.png" alt="Nyuman" className="h-7" />
-          <span className="text-sm font-semibold">HQ</span>
+    <div className="flex h-full flex-col bg-surface">
+      <header className="flex h-14 shrink-0 items-center gap-4 bg-gradient-to-r from-accent-bright to-[#E8913A] px-4 text-white">
+        <div className="flex items-center gap-2.5">
+          <img src="/logo-wordmark.png" alt="Nyuman" className="logo-white h-4" />
+          <span className="rounded-md bg-white/20 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide">HQ</span>
         </div>
-        <div className="mx-auto hidden w-full max-w-md items-center gap-2 rounded-full bg-surface px-4 py-2 text-sm text-ink-muted sm:flex">
-          <Search size={16} /> Rechercher
+        <div className="mx-auto hidden w-full max-w-md items-center gap-2 rounded-full bg-white px-4 py-2 text-sm text-ink-muted shadow-sm sm:flex">
+          <Search size={16} className="text-accent" /> Rechercher des messages, fichiers, personnes
         </div>
         <div className="ml-auto sm:ml-0"><StatusMenu /></div>
       </header>
       <div className="flex min-h-0 flex-1">
-        <nav className="hidden w-20 shrink-0 flex-col items-center gap-1 border-r border-line py-3 sm:flex">
+        <nav className="hidden w-20 shrink-0 flex-col items-center gap-0.5 border-r border-line bg-white py-3 sm:flex">
           {NAV.map((n) => <NavItem key={n.to} {...n} />)}
         </nav>
         <main className="min-w-0 flex-1 overflow-y-auto pb-20 sm:pb-0">
           <Outlet />
         </main>
       </div>
-      <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-line bg-white px-1 pb-[env(safe-area-inset-bottom)] sm:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-line bg-white/95 px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden">
         {NAV.map((n) => <NavItem key={n.to} {...n} mobile />)}
       </nav>
     </div>
