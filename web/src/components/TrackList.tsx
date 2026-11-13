@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Archive, Plus } from "lucide-react";
 import { TRACK_STAGES, tracksApi, type TrackItem, type TrackKind } from "../lib/api";
 import { useLive } from "../lib/live";
@@ -37,8 +38,13 @@ export function useTracks(kind: TrackKind) {
   return { items, load };
 }
 
-export function TrackList({ kind, limit, hideDone }: { kind: TrackKind; limit?: number; hideDone?: boolean }) {
+export type RowAsk = { id: string; name: string; label: string; texte: (t: TrackItem) => string };
+
+export function TrackList({ kind, limit, hideDone, ask }: {
+  kind: TrackKind; limit?: number; hideDone?: boolean; ask?: RowAsk | null;
+}) {
   const { me, members } = useSession();
+  const navigate = useNavigate();
   const { items, load } = useTracks(kind);
   const conf = CONF[kind];
   const [title, setTitle] = useState("");
@@ -88,6 +94,13 @@ export function TrackList({ kind, limit, hideDone }: { kind: TrackKind; limit?: 
                 className={`shrink-0 cursor-pointer rounded-full border-0 py-1 pl-2.5 pr-6 text-xs font-medium outline-none ${stageTone(kind, t.stage)}`}>
                 {TRACK_STAGES[kind].map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
+              {ask && (
+                <button onClick={() => navigate(`/discussions?avec=${ask.id}&texte=${encodeURIComponent(ask.texte(t))}`)}
+                  title={`Demander à ${ask.name}`}
+                  className="shrink-0 rounded-lg bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent transition hover:bg-accent hover:text-white">
+                  {ask.label}
+                </button>
+              )}
               <button onClick={async () => { await tracksApi.update(t.id, { archived: true }); load(); }} title="Ranger" aria-label="Ranger"
                 className="rounded-md p-1 text-ink-muted opacity-0 hover:bg-surface hover:text-ink group-hover:opacity-100"><Archive size={14} /></button>
             </li>

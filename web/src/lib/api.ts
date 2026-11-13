@@ -269,7 +269,8 @@ export type MiniTask = { id: string; title: string; status: TaskStatus; priority
 export type Space = {
   roles: Role[]; agents: string[]; positions: { id: number; title: string; department: string }[]; is_head: boolean; today: string;
   to_vote?: { id: string; title: string; author_id: string; deadline: string | null; has_opinion: boolean }[];
-  departments?: { role: Role; department: string; open: number; overdue: number; done_week: number; review: number }[];
+  departments?: { role: Role; department: string; open: number; overdue: number; done_week: number; review: number;
+    head_id: string | null; late_titles: string[] }[];
   budget_alerts?: { id: string; name: string; icon: string; hours_budget: number; used_minutes: number; pct: number }[];
   week_due?: MiniTask[];
   quiet_projects?: { id: string; name: string; icon: string; owner_id: string | null }[];

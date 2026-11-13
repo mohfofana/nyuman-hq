@@ -26,6 +26,8 @@ router = APIRouter(prefix="/api", tags=["space"])
 ROLE_OF_POSITION = {1: "dg", 2: "coord", 3: "growth", 4: "growth", 5: "growth", 6: "growth",
                     7: "ops", 8: "ops", 9: "finance", 10: "tech", 11: "tech", 12: "tech"}
 DEPARTMENT_OF_ROLE = {"growth": "Croissance", "ops": "Opérations", "finance": "Finance", "tech": "Produit et technique"}
+# Le poste de responsable de chaque département : sert à savoir à qui s'adresser.
+HEAD_POSITION_OF_ROLE = {"growth": 3, "ops": 7, "finance": 9, "tech": 10}
 LAUNCH_DAY = date(2026, 12, 12)
 
 # Étapes de chaque liste de suivi (la première est l'étape de départ).
@@ -347,12 +349,19 @@ async def my_space(me: Member = Depends(current_member), session: AsyncSession =
         return [t for t in ts if t.due_date and t.due_date < today]
 
     if "dg" in roles or "coord" in roles:
+        heads_by_position = {}
+        for pid, mid in (await session.execute(select(PositionHolder.position_id, PositionHolder.member_id).where(
+                PositionHolder.position_id.in_(list(HEAD_POSITION_OF_ROLE.values())), PositionHolder.kind == "holder"))).all():
+            heads_by_position.setdefault(pid, mid)
         depts = []
         for role, dept in DEPARTMENT_OF_ROLE.items():
             ts = dept_tasks(dept)
             done = [t for t in done_week if projects.get(t.project_id) and projects[t.project_id].department == dept]
-            depts.append({"role": role, "department": dept, "open": len(ts), "overdue": len(overdue(ts)),
-                          "done_week": len(done), "review": sum(1 for t in ts if t.status == "review")})
+            late = overdue(ts)
+            depts.append({"role": role, "department": dept, "open": len(ts), "overdue": len(late),
+                          "done_week": len(done), "review": sum(1 for t in ts if t.status == "review"),
+                          "head_id": heads_by_position.get(HEAD_POSITION_OF_ROLE[role]),
+                          "late_titles": [t.title for t in late[:3]]})
         out["departments"] = depts
         # budgets d'heures à surveiller (80 % et plus)
         used = dict((await session.execute(select(TimeEntry.project_id, func.sum(TimeEntry.minutes)).group_by(TimeEntry.project_id))).all())

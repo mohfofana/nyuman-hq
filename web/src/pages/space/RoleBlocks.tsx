@@ -5,7 +5,7 @@ import { appStatsApi, fmtMinutes, type AppStats, type AppStatsResponse, type Min
 import { useSession } from "../../lib/session";
 import { Avatar } from "../../components/Avatar";
 import { Panel, SoonTag } from "../../components/ui";
-import { TrackList } from "../../components/TrackList";
+import { TrackList, type RowAsk } from "../../components/TrackList";
 
 /** Ce qu'on demande le plus souvent à son agent, prêt à envoyer. Un clic = un réveil (quelques centimes). */
 export const AGENT_ASKS: Record<Role, string[]> = {
@@ -32,6 +32,33 @@ export const AGENT_ASKS: Record<Role, string[]> = {
 export const ROLE_LABEL: Record<Role, string> = {
   dg: "Direction générale", coord: "Coordination", growth: "Croissance", ops: "Opérations et juridique", finance: "Finance", tech: "Produit et technique",
 };
+
+/** Ouvre une discussion avec le message déjà écrit. L'envoi reste à la personne. */
+export function useAsk() {
+  const navigate = useNavigate();
+  return (memberId: string, texte?: string) =>
+    navigate(`/discussions?avec=${memberId}${texte ? `&texte=${encodeURIComponent(texte)}` : ""}`);
+}
+
+function AskButton({ to, texte, children, tone = "soft" }: {
+  to: string; texte: string; children: ReactNode; tone?: "soft" | "ghost";
+}) {
+  const ask = useAsk();
+  return (
+    <button onClick={() => ask(to, texte)}
+      className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+        tone === "soft" ? "bg-accent-soft text-accent hover:bg-accent hover:text-white"
+                        : "text-accent hover:underline"}`}>
+      {children}
+    </button>
+  );
+}
+
+/** L'agent qui appuie mon poste : à qui on confie les petites préparations. */
+function useMyAgent(space: Space) {
+  const { members } = useSession();
+  return members.find((m) => m.id === space.agents[0]) ?? null;
+}
 
 const more = (to: string, label = "Tout voir") => (
   <Link to={to} className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline">{label} <ArrowRight size={14} /></Link>
@@ -155,27 +182,38 @@ function VoteBlock({ space }: { space: Space }) {
 }
 
 function Departments({ space }: { space: Space }) {
+  const { me, members } = useSession();
   return (
     <Panel title="Où en sont les départements" action={more("/projets", "Projets")}>
       <div className="grid gap-2 sm:grid-cols-2">
-        {space.departments!.map((d) => (
-          <div key={d.role} className="rounded-2xl bg-surface px-3.5 py-3">
-            <div className="text-sm font-semibold">{d.department}</div>
-            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-soft">
-              <span><b className="text-ink">{d.open}</b> en cours</span>
-              <span className={d.overdue ? "font-medium text-busy" : ""}><b>{d.overdue}</b> en retard</span>
-              <span className="text-[#18794A]"><b>{d.done_week}</b> finies (7 j)</span>
+        {space.departments!.map((d) => {
+          const head = members.find((m) => m.id === d.head_id);
+          const texte = head && d.late_titles.length
+            ? `Bonjour ${head.name.split(" ")[0]}, où en est-on sur ${d.late_titles.map((t) => `« ${t} »`).join(", ")} ? C'est en retard.`
+            : "";
+          return (
+            <div key={d.role} className="rounded-2xl bg-surface px-3.5 py-3">
+              <div className="text-sm font-semibold leading-snug">{d.department}</div>
+              {head && <div className="truncate text-xs text-ink-muted">{head.name}</div>}
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-soft">
+                <span><b className="text-ink">{d.open}</b> en cours</span>
+                <span className={d.overdue ? "font-medium text-busy" : ""}><b>{d.overdue}</b> en retard</span>
+                <span className="text-[#18794A]"><b>{d.done_week}</b> finies (7 j)</span>
+              </div>
+              {d.overdue > 0 && head && head.id !== me?.id && (
+                <div className="mt-2"><AskButton to={head.id} texte={texte}>Demander à {head.name.split(" ")[0]}</AskButton></div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       {space.budget_alerts && space.budget_alerts.length > 0 && (
         <ul className="mt-3 space-y-1.5">
           {space.budget_alerts.map((b) => (
             <li key={b.id} className="flex items-center gap-2 rounded-xl bg-[#FFF8E5] px-3 py-2 text-sm">
               <AlertTriangle size={14} className={b.pct >= 100 ? "text-busy" : "text-away"} />
-              <span className="flex-1 truncate">{b.icon} {b.name}</span>
-              <span className="text-xs font-medium">{fmtMinutes(b.used_minutes)} sur {b.hours_budget} h ({b.pct} %)</span>
+              <span className="min-w-0 flex-1 truncate">{b.icon} {b.name}</span>
+              <span className="shrink-0 text-xs font-medium">{fmtMinutes(b.used_minutes)} sur {b.hours_budget} h ({b.pct} %)</span>
             </li>
           ))}
         </ul>
@@ -237,10 +275,17 @@ function WeekDue({ space }: { space: Space }) {
 }
 
 function DeptTasks({ space, role }: { space: Space; role: Role }) {
+  const agent = useMyAgent(space);
   const d = space.dept?.[role];
   if (!d) return null;
+  const action = agent && d.open > 0
+    ? <AskButton tone="ghost" to={agent.id}
+        texte={`${agent.name}, fais-moi un point court sur « ${d.department} » : ce qui avance, ce qui bloque, et ce que je devrais débloquer en premier.`}>
+        Demander un point
+      </AskButton>
+    : more("/projets");
   return (
-    <Panel title={`Tâches · ${d.department}`} action={more("/projets")}>
+    <Panel title={`Tâches · ${d.department}`} action={action}>
       <div className="mb-3 flex gap-2 text-xs">
         <span className="rounded-full bg-surface px-2.5 py-1"><b>{d.open}</b> en cours</span>
         <span className={`rounded-full px-2.5 py-1 ${d.overdue ? "bg-[#FDE6E2] text-[#B5321F]" : "bg-surface"}`}><b>{d.overdue}</b> en retard</span>
@@ -313,7 +358,13 @@ function AppFigures({ role }: { role: Role }) {
 }
 
 function GrowthBlock({ space }: { space: Space }) {
+  const agent = useMyAgent(space);
   const s = space.salons ?? {};
+  const ask: RowAsk | null = agent && {
+    id: agent.id, name: agent.name, label: "Message",
+    texte: (t) => `${agent.name}, écris un message court et chaleureux pour « ${t.title} »` +
+      (t.contact ? ` (contact : ${t.contact})` : "") + `, actuellement « ${t.stage} ». Objectif : l'amener à sa première réservation.`,
+  };
   return (
     <Panel title="Salons à suivre" action={more("/suivi/salon")}>
       <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -321,7 +372,7 @@ function GrowthBlock({ space }: { space: Space }) {
           <Tile key={stage} label={stage.charAt(0).toUpperCase() + stage.slice(1)} value={n} tone={i === 3 && n ? "text-[#18794A]" : ""} />
         ))}
       </div>
-      <TrackList kind="salon" hideDone limit={6} />
+      <TrackList kind="salon" hideDone limit={6} ask={ask} />
     </Panel>
   );
 }
@@ -346,10 +397,22 @@ function LaunchCard({ days }: { days: number }) {
   );
 }
 
-function SimpleTrack({ kind, title, to }: { kind: "echeance" | "depense"; title: string; to: string }) {
+function SimpleTrack({ kind, title, to, space }: {
+  kind: "echeance" | "depense"; title: string; to: string; space: Space;
+}) {
+  const agent = useMyAgent(space);
+  const ask: RowAsk | null = agent && {
+    id: agent.id, name: agent.name, label: kind === "echeance" ? "Préparer" : "Avis",
+    texte: (t) => kind === "echeance"
+      ? `${agent.name}, prépare « ${t.title} »` + (t.due_date ? ` (pour le ${t.due_date})` : "") +
+        ` : ce qu'il faut faire, dans quel ordre, et ce qu'on risque si on la rate.`
+      : `${agent.name}, ton avis sur cette dépense : « ${t.title} »` +
+        (t.amount != null ? ` — ${t.amount.toLocaleString("fr-FR")} ${t.currency}` : "") +
+        `. Est-ce justifié, et peut-on faire moins cher ?`,
+  };
   return (
     <Panel title={title} action={more(to)}>
-      <TrackList kind={kind} hideDone limit={5} />
+      <TrackList kind={kind} hideDone limit={5} ask={ask} />
     </Panel>
   );
 }
@@ -381,9 +444,9 @@ export function RoleBlocks({ space }: { space: Space }) {
   }
   if (r.has("dg") || r.has("coord")) left.push(<Departments key="depts" space={space} />);
   if (r.has("coord")) left.push(<WeekDue key="week" space={space} />);
-  if (r.has("ops")) left.push(<SimpleTrack key="ech" kind="echeance" title="Échéances et contrats" to="/suivi/echeance" />);
+  if (r.has("ops")) left.push(<SimpleTrack key="ech" kind="echeance" title="Échéances et contrats" to="/suivi/echeance" space={space} />);
   if (space.spend_pending) {
-    (r.has("finance") ? left : right).push(<SimpleTrack key="dep" kind="depense" title={`Dépenses à valider${space.spend_pending.count ? ` (${space.spend_pending.count})` : ""}`} to="/suivi/depense" />);
+    (r.has("finance") ? left : right).push(<SimpleTrack key="dep" kind="depense" title={`Dépenses à valider${space.spend_pending.count ? ` (${space.spend_pending.count})` : ""}`} to="/suivi/depense" space={space} />);
   }
   for (const role of ["growth", "ops", "finance", "tech"] as Role[]) if (r.has(role)) left.push(<DeptTasks key={`t-${role}`} space={space} role={role} />);
   if (space.ai_cost) right.push(<AiCost key="ai" space={space} />);

@@ -56,3 +56,14 @@ async def test_vote_clos_quand_tous_ont_vote(mohamed):
         last = (await c.post(f"/api/proposals/{p['id']}/vote", json={"choice": "pour"})).json()
         await c.aclose()
     assert last["status"] == "adopted"
+
+
+async def test_departements_disent_a_qui_s_adresser(mohamed):
+    """Le DG voit, pour chaque département, qui le dirige et ce qui traîne."""
+    p = (await mohamed.post("/api/projects", json={"name": "Lancement", "department": "Croissance"})).json()
+    await mohamed.post("/api/tasks", json={"project_id": p["id"], "title": "Confirmer les salons",
+                                           "assignee_id": "abraham", "due_date": "2020-01-01"})
+    depts = {d["role"]: d for d in (await mohamed.get("/api/space")).json()["departments"]}
+    assert depts["growth"]["head_id"] == "abraham"
+    assert depts["growth"]["overdue"] == 1 and depts["growth"]["late_titles"] == ["Confirmer les salons"]
+    assert depts["tech"]["head_id"] == "kevin" and depts["finance"]["head_id"] == "carmel"
