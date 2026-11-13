@@ -223,3 +223,57 @@ export function fmtMinutes(min: number): string {
 
 /** Jour local au format AAAA-MM-JJ (Abidjan = UTC). */
 export const isoDay = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+// ---------- mon espace, suivis, salle du conseil ----------
+export type TrackKind = "salon" | "echeance" | "depense";
+export type TrackItem = {
+  id: string; kind: TrackKind; title: string; stage: string; owner_id: string | null; due_date: string | null;
+  amount: number | null; currency: string; contact: string; note: string; archived: boolean; created_by: string;
+  decided_by: string | null; created_at: string; updated_at: string;
+};
+export const TRACK_STAGES: Record<TrackKind, string[]> = {
+  salon: ["à contacter", "contacté", "inscrit", "1re réservation"],
+  echeance: ["à faire", "en cours", "réglé"],
+  depense: ["à valider", "validée", "refusée"],
+};
+export const tracksApi = {
+  list: (kind: TrackKind) => req<TrackItem[]>(`/api/tracks?kind=${kind}`),
+  add: (d: Partial<TrackItem> & { kind: TrackKind; title: string }) => req<TrackItem>("/api/tracks", { method: "POST", body: JSON.stringify(d) }),
+  update: (id: string, d: Partial<TrackItem>) => req<TrackItem>(`/api/tracks/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
+};
+
+export type VoteChoice = "pour" | "contre" | "abstention";
+export type Proposal = {
+  id: string; title: string; body: string; figures: string; author_id: string; status: "open" | "adopted" | "rejected" | "withdrawn";
+  deadline: string | null; opinion: string; opinion_by: string | null; created_at: string; closed_at: string | null;
+  voters: string[]; tally: Record<VoteChoice, number>;
+  votes: { member_id: string; choice: VoteChoice; comment: string; created_at: string }[];
+};
+export const proposalsApi = {
+  list: (status?: "open" | "closed") => req<Proposal[]>(`/api/proposals${status ? `?status=${status}` : ""}`),
+  get: (id: string) => req<Proposal>(`/api/proposals/${id}`),
+  create: (d: { title: string; body?: string; figures?: string; deadline?: string | null; ask_critic?: boolean }) =>
+    req<Proposal>("/api/proposals", { method: "POST", body: JSON.stringify(d) }),
+  vote: (id: string, choice: VoteChoice, comment = "") => req<Proposal>(`/api/proposals/${id}/vote`, { method: "POST", body: JSON.stringify({ choice, comment }) }),
+  close: (id: string) => req<Proposal>(`/api/proposals/${id}/close`, { method: "POST" }),
+  withdraw: (id: string) => req<Proposal>(`/api/proposals/${id}/withdraw`, { method: "POST" }),
+};
+
+export type Role = "dg" | "coord" | "growth" | "ops" | "finance" | "tech";
+export type MiniTask = { id: string; title: string; status: TaskStatus; priority: string; assignee_id: string | null; due_date: string | null;
+  project_id: string; project_name: string; project_icon: string };
+export type Space = {
+  roles: Role[]; agents: string[]; positions: { id: number; title: string; department: string }[]; is_head: boolean; today: string;
+  to_vote?: { id: string; title: string; author_id: string; deadline: string | null; has_opinion: boolean }[];
+  departments?: { role: Role; department: string; open: number; overdue: number; done_week: number; review: number }[];
+  budget_alerts?: { id: string; name: string; icon: string; hours_budget: number; used_minutes: number; pct: number }[];
+  week_due?: MiniTask[];
+  quiet_projects?: { id: string; name: string; icon: string; owner_id: string | null }[];
+  spend_pending?: { count: number; items: TrackItem[] };
+  ai_cost?: { month_usd: number; replies: number };
+  salons?: Record<string, number>;
+  launch_days?: number;
+  deadlines?: TrackItem[];
+  dept?: Partial<Record<Role, { department: string; open: number; overdue: number; urgent: MiniTask[] }>>;
+};
+export const spaceApi = { get: () => req<Space>("/api/space") };

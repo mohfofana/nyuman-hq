@@ -12,6 +12,8 @@ import { SearchPage } from "./pages/SearchPage";
 import { Agenda } from "./pages/agenda/Agenda";
 import { Projects } from "./pages/projects/Projects";
 import { TimePage } from "./pages/Time";
+import { Council } from "./pages/Council";
+import { TrackPage } from "./pages/TrackPage";
 
 export default function App() {
   const { me, loading } = useSession();
@@ -29,6 +31,8 @@ export default function App() {
         <Route path="/projets" element={<Projects />} />
         <Route path="/projets/:projectId" element={<Projects />} />
         <Route path="/projets/:projectId/page/:pageId" element={<Projects />} />
+        <Route path="/conseil" element={<Council />} />
+        <Route path="/suivi/:kind" element={<TrackPage />} />
         <Route path="/temps" element={<TimePage />} />
         <Route path="/fichiers" element={<Preview kind="files" icon={FolderOpen} title="Fichiers" soon="Bientôt" tone="blue"
           text="Tous les fichiers partagés, rangés par canal et par projet."

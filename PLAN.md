@@ -26,6 +26,18 @@ Une pastille sur la photo de chacun, qui change toute seule :
 - Les agents ont la même pastille : 🟢 au travail, 🟡 en attente, 🔴 bloqué.
 Fonctionne sur ordinateur et sur téléphone, sans service payant (la connexion en direct du serveur suffit). Prévu à l'étape 3, et relié aux réunions à l'étape 4.
 
+## « Mon espace » : un poste de travail par métier (Mohamed, 13/11)
+L'accueil devient **Mon espace**. Il suit le **poste tenu dans l'organigramme**, pas la personne : si quelqu'un change de poste, son espace change.
+- Pour tous : mon poste, **« Demander à [mon agent] »**, ce que je fais aujourd'hui, mes tâches, mes réunions, l'équipe, l'activité.
+- **DG** : à voter, où en sont les départements (en cours / en retard / finies 7 j), alertes de budget d'heures, dépenses à valider, coût des agents IA, chiffres de l'app.
+- **Coordination** : départements, échéances des 7 jours de toute l'équipe, projets immobiles depuis 14 jours.
+- **Croissance** : J − x avant le 12/12, objectif 300 pros, **salons à suivre** (à contacter → contacté → inscrit → 1re réservation), tâches du département.
+- **Opérations et juridique** : **échéances et contrats** (à faire → en cours → réglé), tâches.
+- **Finance** : **dépenses à valider** (seul un responsable humain valide ou refuse ; rien n'est payé depuis HQ), coût des agents, tâches.
+- **Produit et technique** : tâches urgentes du département.
+- **Chiffres de l'app** (pros, réservations, acomptes, retraits, litiges, version) : « bientôt », en attente de la route en lecture seule demandée à Kodjo le 13/11.
+- **Salle du conseil** (`/conseil`) : proposition (texte + chiffres), annoncée dans #général, **avis de Koffi** demandé automatiquement (il est réveillé, ~0,15 $), vote Pour / Contre / Abstention des 6 responsables, clos seul quand tous ont voté (ou par un responsable : majorité, égalité = rejetée).
+
 ## Suivi du temps façon Gryzzly (validé par Mohamed le 13/11, remplace « Ma journée »)
 On suit le travail, pas les personnes : **chacun déclare lui-même son temps**, rien n'est mesuré. La plupart des membres sont à temps partiel.
 - Chacun choisit ses **jours travaillés** et l'**heure de la question** (17 h à 22 h, ou jamais) dans Temps.

@@ -2,14 +2,17 @@ import type { ReactNode } from "react";
 import type { Channel, Member } from "../../lib/api";
 import { MeetingCard } from "../../components/MeetingCard";
 import { TimeCard } from "../../components/TimeCard";
+import { ProposalCard } from "../../components/ProposalCard";
 
-const TOKEN = /(<@[a-z0-9_-]+>|<meeting:[a-f0-9]+>|<temps:\d{4}-\d{2}-\d{2}>|https?:\/\/[^\s<]+)/g;
+const TOKEN = /(<@[a-z0-9_-]+>|<meeting:[a-f0-9]+>|<proposal:[a-f0-9]+>|<temps:\d{4}-\d{2}-\d{2}>|https?:\/\/[^\s<]+)/g;
 
 /** Affiche le texte d'un message : mentions en pastille, liens cliquables. */
 export function renderBody(body: string, members: Member[], meId?: string): ReactNode[] {
   return body.split(TOKEN).map((part, i) => {
     const meeting = part.match(/^<meeting:([a-f0-9]+)>$/);
     if (meeting) return <MeetingCard key={i} id={meeting[1]} />;
+    const prop = part.match(/^<proposal:([a-f0-9]+)>$/);
+    if (prop) return <ProposalCard key={i} id={prop[1]} />;
     const temps = part.match(/^<temps:(\d{4}-\d{2}-\d{2})>$/);
     if (temps) return <TimeCard key={i} day={temps[1]} />;
     const mention = part.match(/^<@([a-z0-9_-]+)>$/);
@@ -37,7 +40,7 @@ export function encodeMentions(text: string, members: Member[]): string {
 }
 
 export function decodeMentions(body: string, members: Member[]): string {
-  return body.replace(/<meeting:[a-f0-9]+>/g, "📅 Réunion").replace(/<temps:[\d-]+>/g, "⏱️ Votre journée, sur quoi ?").replace(/<@([a-z0-9_-]+)>/g, (_, id) => "@" + (members.find((m) => m.id === id)?.name ?? id));
+  return body.replace(/<meeting:[a-f0-9]+>/g, "📅 Réunion").replace(/<temps:[\d-]+>/g, "⏱️ Votre journée, sur quoi ?").replace(/<proposal:[a-f0-9]+>/g, "⚖️ Proposition au vote").replace(/<@([a-z0-9_-]+)>/g, (_, id) => "@" + (members.find((m) => m.id === id)?.name ?? id));
 }
 
 export function channelTitle(ch: Channel, members: Member[], meId?: string): string {

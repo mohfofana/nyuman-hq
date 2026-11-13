@@ -206,6 +206,52 @@ tool("hq_temps", "Temps déclaré par l'équipe, par projet (et budget d'heures)
     return `Du ${t.start} au ${t.end}\n` + (lines.join("\n") || "Personne n'a encore rien noté.");
   });
 
+tool("hq_propositions", "Salle du conseil : propositions ouvertes (ou closes) avec chiffres, avis de Koffi et votes des responsables.",
+  { statut: z.enum(["open", "closed"]).optional().describe("open par défaut") },
+  async ({ statut }) => {
+    const list = await members();
+    const ps = await api("GET", `/api/proposals?status=${statut || "open"}`);
+    if (!ps.length) return "Aucune proposition.";
+    return ps.map((p) => `« ${p.title} » [id ${p.id}] — ${p.status} · par ${nameOf(list, p.author_id)}\n` +
+      (p.body ? `Texte : ${p.body}\n` : "") + (p.figures ? `Chiffres : ${p.figures}\n` : "") +
+      `Avis du contradicteur : ${p.opinion || "pas encore donné"}\n` +
+      `Votes : pour ${p.tally.pour}, contre ${p.tally.contre}, abstention ${p.tally.abstention} sur ${p.voters.length} responsables` +
+      (p.votes.length ? " (" + p.votes.map((v) => `${nameOf(list, v.member_id)} : ${v.choice}${v.comment ? " — " + v.comment : ""}`).join(" ; ") + ")" : "")).join("\n\n");
+  });
+
+tool("hq_proposer", "Soumet une proposition au vote des responsables (salle du conseil). Les agents préparent, les humains tranchent.",
+  { titre: z.string().min(3).max(200), texte: z.string().max(10000).optional(), chiffres: z.string().max(4000).optional(),
+    date_limite: z.string().optional().describe("AAAA-MM-JJ") },
+  async ({ titre, texte, chiffres, date_limite }) => {
+    const p = await api("POST", "/api/proposals", { title: titre, body: texte || "", figures: chiffres || "", deadline: date_limite || null });
+    return `Proposition soumise [id ${p.id}], annoncée dans #général.`;
+  });
+
+tool("hq_avis_proposition", "Réservé à Koffi (contradicteur) : donne l'avis affiché au-dessus du vote. Chiffres, risques, et une alternative.",
+  { id: z.string(), avis: z.string().min(1).max(6000) },
+  async ({ id, avis }) => { await api("PUT", `/api/proposals/${id}/opinion`, { opinion: avis }); return "Avis enregistré."; });
+
+tool("hq_suivis", "Listes de suivi : salons à amener à leur 1re réservation (salon), échéances et contrats (echeance), dépenses à valider (depense).",
+  { liste: z.enum(["salon", "echeance", "depense"]) },
+  async ({ liste }) => {
+    const list = await members();
+    const rows = await api("GET", `/api/tracks?kind=${liste}`);
+    if (!rows.length) return "Liste vide.";
+    return rows.map((t) => `${t.title} — ${t.stage}` + (t.due_date ? ` · pour le ${t.due_date}` : "") +
+      (t.amount != null ? ` · ${t.amount} ${t.currency}` : "") + (t.owner_id ? ` · ${nameOf(list, t.owner_id)}` : "") +
+      (t.contact ? ` · ${t.contact}` : "") + (t.note ? ` · ${t.note}` : "") + ` [id ${t.id}]`).join("\n");
+  });
+
+tool("hq_ajouter_suivi", "Ajoute une ligne à une liste de suivi (salon, echeance ou depense). Une dépense commence toujours « à valider » ; seul un responsable humain la valide.",
+  { liste: z.enum(["salon", "echeance", "depense"]), titre: z.string().min(1).max(200), echeance: z.string().optional().describe("AAAA-MM-JJ"),
+    montant: z.number().int().min(0).optional(), devise: z.string().max(6).optional(), contact: z.string().max(160).optional(),
+    note: z.string().max(4000).optional(), responsable: z.string().optional() },
+  async (a) => {
+    const t = await api("POST", "/api/tracks", { kind: a.liste, title: a.titre, due_date: a.echeance || null, amount: a.montant ?? null,
+      currency: a.devise || "FCFA", contact: a.contact || "", note: a.note || "", owner_id: a.responsable || null });
+    return `Ajouté [id ${t.id}] — ${t.stage}.`;
+  });
+
 tool("hq_planifier_reunion", "Planifie une réunion d'équipe avec lien Jitsi et l'annonce dans un canal. Heure d'Abidjan (UTC).",
   {
     titre: z.string().min(1).max(160),

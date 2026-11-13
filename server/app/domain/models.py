@@ -272,3 +272,53 @@ class TimeAsk(Base):
     day: Mapped[date] = mapped_column(Date, primary_key=True)
     state: Mapped[str] = mapped_column(String(10), default="asked")  # asked | answered | off
     message_id: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+
+
+class TrackItem(Base):
+    """Une ligne de suivi propre à un poste : un salon à amener à sa 1re réservation, une échéance, une dépense à valider."""
+
+    __tablename__ = "track_items"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    kind: Mapped[str] = mapped_column(String(16), index=True)  # salon | echeance | depense
+    title: Mapped[str] = mapped_column(String(200))
+    stage: Mapped[str] = mapped_column(String(30))
+    owner_id: Mapped[Optional[str]] = mapped_column(ForeignKey("members.id"), nullable=True)
+    due_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    amount: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    currency: Mapped[str] = mapped_column(String(6), default="FCFA")
+    contact: Mapped[str] = mapped_column(String(160), default="")
+    note: Mapped[str] = mapped_column(Text, default="")
+    archived: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_by: Mapped[str] = mapped_column(ForeignKey("members.id"))
+    decided_by: Mapped[Optional[str]] = mapped_column(ForeignKey("members.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Proposal(Base):
+    """Salle du conseil : une proposition (texte, chiffres, avis de Koffi) soumise au vote des heads."""
+
+    __tablename__ = "proposals"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    title: Mapped[str] = mapped_column(String(200))
+    body: Mapped[str] = mapped_column(Text, default="")
+    figures: Mapped[str] = mapped_column(Text, default="")
+    author_id: Mapped[str] = mapped_column(ForeignKey("members.id"))
+    status: Mapped[str] = mapped_column(String(12), default="open")  # open | adopted | rejected | withdrawn
+    deadline: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    opinion: Mapped[str] = mapped_column(Text, default="")  # avis du contradicteur
+    opinion_by: Mapped[Optional[str]] = mapped_column(ForeignKey("members.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class Vote(Base):
+    __tablename__ = "votes"
+
+    proposal_id: Mapped[str] = mapped_column(ForeignKey("proposals.id", ondelete="CASCADE"), primary_key=True)
+    member_id: Mapped[str] = mapped_column(ForeignKey("members.id"), primary_key=True)
+    choice: Mapped[str] = mapped_column(String(12))  # pour | contre | abstention
+    comment: Mapped[str] = mapped_column(String(500), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -22,7 +22,7 @@ export const useLive = () => useContext(LiveCtx);
 const IDLE_AFTER_MS = 10 * 60 * 1000;
 
 function plain(body: string, members: Member[]) {
-  return body.replace(/<meeting:[a-f0-9]+>/g, "📅 Réunion").replace(/<temps:[\d-]+>/g, "⏱️ Votre journée, sur quoi ?")
+  return body.replace(/<meeting:[a-f0-9]+>/g, "📅 Réunion").replace(/<temps:[\d-]+>/g, "⏱️ Votre journée, sur quoi ?").replace(/<proposal:[a-f0-9]+>/g, "⚖️ Proposition au vote")
     .replace(/<@([a-z0-9_-]+)>/g, (_, id) => "@" + (members.find((m) => m.id === id)?.name ?? id));
 }
 

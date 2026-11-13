@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Bell, CalendarPlus, Check, FilePlus2, MessageSquarePlus, Pencil, Target } from "lucide-react";
+import { ArrowRight, Bell, CalendarPlus, Check, FilePlus2, MessageSquarePlus, Pencil } from "lucide-react";
 import { useSession } from "../lib/session";
 import { useLive } from "../lib/live";
 import { Avatar } from "../components/Avatar";
@@ -8,7 +8,8 @@ import { Panel, PresencePill, SoonTag } from "../components/ui";
 import { presenceLabel, presenceOf } from "../lib/presence";
 import { ActivityRow, NotifButton, useActivity } from "./Activity";
 import { useEffect } from "react";
-import { meetings, type Meeting } from "../lib/api";
+import { meetings, spaceApi, type Meeting, type Space } from "../lib/api";
+import { MyPostCard, NoRole, RoleBlocks } from "./space/RoleBlocks";
 import { MeetingCard } from "../components/MeetingCard";
 import { useTasks } from "./projects/useProjects";
 import { dueLabel } from "./projects/meta";
@@ -94,10 +95,21 @@ const SHORTCUTS = [
   { icon: FilePlus2, label: "Ouvrir les projets", to: "/projets", tone: "bg-sun-soft text-[#9A6B00]", ready: true },
 ];
 
+function useSpace() {
+  const { subscribe } = useLive();
+  const [space, setSpace] = useState<Space | null>(null);
+  useEffect(() => { spaceApi.get().then(setSpace); }, []);
+  useEffect(() => subscribe((ev) => {
+    if (["proposal.updated", "track.updated", "task.updated", "task.assigned", "project.updated", "time.updated"].includes(ev.type)) spaceApi.get().then(setSpace);
+  }), [subscribe]);
+  return space;
+}
+
 export function Home() {
   const { me, members } = useSession();
   useLive();
   const activity = useActivity();
+  const space = useSpace();
   if (!me) return null;
   const date = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
   const others = members.filter((m) => m.id !== me.id);
@@ -114,19 +126,11 @@ export function Home() {
             <div className="mt-3"><PresencePill p={presenceOf(me, me)} /></div>
             <TodayCard />
           </div>
-          <div className="rounded-2xl bg-white p-5 text-ink shadow-[0_16px_32px_-16px_rgba(188,96,13,0.35)]">
-            <div className="flex items-center gap-2 text-sm font-semibold"><Target size={18} className="text-accent" /> Objectif de l'année</div>
-            <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-4xl font-semibold tracking-tight">300</span>
-              <span className="text-sm text-ink-soft">pros actifs</span>
-            </div>
-            <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-surface-2">
-              <div className="h-full w-full bg-[repeating-linear-gradient(45deg,#F1E3D5_0,#F1E3D5_6px,#F8EEE4_6px,#F8EEE4_12px)]" />
-            </div>
-            <div className="mt-2 text-xs text-ink-muted">Le chiffre en direct de l'app arrive avec le salon.</div>
-          </div>
+          {space ? <MyPostCard space={space} /> : <div />}
         </div>
       </section>
+
+      {space && (space.roles.length || space.to_vote ? <RoleBlocks space={space} /> : me.kind === "human" && <NoRole />)}
 
       <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
         <div className="space-y-5">

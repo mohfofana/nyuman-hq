@@ -6,7 +6,7 @@ import { StatusMenu } from "./StatusMenu";
 import { Toasts } from "./Toasts";
 
 export const NAV = [
-  { to: "/accueil", label: "Accueil", icon: House },
+  { to: "/accueil", label: "Mon espace", short: "Espace", icon: House },
   { to: "/discussions", label: "Discussions", icon: MessagesSquare },
   { to: "/agenda", label: "Agenda", icon: CalendarDays },
   { to: "/projets", label: "Projets", icon: LayoutList },
@@ -15,7 +15,7 @@ export const NAV = [
   { to: "/equipe", label: "Équipe", icon: Users },
 ];
 
-function NavItem({ to, label, icon: Icon, mobile }: (typeof NAV)[number] & { mobile?: boolean }) {
+function NavItem({ to, label, icon: Icon, mobile, ...rest }: (typeof NAV)[number] & { mobile?: boolean; short?: string }) {
   const { channels } = useLive();
   const badge = to === "/discussions"
     ? channels.reduce((n, c) => n + (c.kind === "dm" ? c.unread : c.mentions), 0)
@@ -34,7 +34,7 @@ function NavItem({ to, label, icon: Icon, mobile }: (typeof NAV)[number] & { mob
             {badge > 0 && <span className="absolute -top-0.5 right-1.5 min-w-[18px] rounded-full bg-busy px-1 text-center text-[10px] font-bold leading-[18px] text-white ring-2 ring-white">{badge > 99 ? "99+" : badge}</span>}
             {dot && <span className="absolute right-2.5 top-0.5 h-2 w-2 rounded-full bg-accent ring-2 ring-white" />}
           </span>
-          {label}
+          {mobile && rest.short ? rest.short : label}
         </>
       )}
     </NavLink>

@@ -124,9 +124,11 @@ class Waker:
     def enabled(self) -> bool:
         return settings.agent_wake
 
-    async def on_message(self, msg: Message, channel: Channel, author: Member, mentioned: Set[str]) -> List[str]:
-        """Appelé après chaque nouveau message. Renvoie les agents réveillés (ou mis en attente)."""
-        if author.kind != "human" or not self.enabled:
+    async def on_message(self, msg: Message, channel: Channel, author: Member, mentioned: Set[str],
+                         force: bool = False) -> List[str]:
+        """Appelé après chaque nouveau message. Renvoie les agents réveillés (ou mis en attente).
+        force : réveil voulu par HQ lui-même (avis de Koffi sur une proposition), même si l'auteur est un agent."""
+        if (author.kind != "human" and not force) or not self.enabled:
             return []
         targets = {m for m in mentioned if m in hub.agents}
         if channel.kind == "dm":
