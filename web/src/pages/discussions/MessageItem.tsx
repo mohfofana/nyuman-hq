@@ -50,10 +50,10 @@ export function MessageItem({ m, members, me, compact, onReply, inThread }: {
           </div>
         ) : (
           m.body && (
-            <p className="whitespace-pre-wrap break-words text-[14.5px] leading-relaxed">
+            <div className="whitespace-pre-wrap break-words text-[14.5px] leading-relaxed">
               {renderBody(m.body, members, me.id)}
               {m.edited_at && <span className="ml-1 text-[11px] text-ink-muted">(modifié)</span>}
-            </p>
+            </div>
           )
         )}
 

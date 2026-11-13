@@ -1,11 +1,14 @@
 import type { ReactNode } from "react";
 import type { Channel, Member } from "../../lib/api";
+import { MeetingCard } from "../../components/MeetingCard";
 
-const TOKEN = /(<@[a-z0-9_-]+>|https?:\/\/[^\s<]+)/g;
+const TOKEN = /(<@[a-z0-9_-]+>|<meeting:[a-f0-9]+>|https?:\/\/[^\s<]+)/g;
 
 /** Affiche le texte d'un message : mentions en pastille, liens cliquables. */
 export function renderBody(body: string, members: Member[], meId?: string): ReactNode[] {
   return body.split(TOKEN).map((part, i) => {
+    const meeting = part.match(/^<meeting:([a-f0-9]+)>$/);
+    if (meeting) return <MeetingCard key={i} id={meeting[1]} />;
     const mention = part.match(/^<@([a-z0-9_-]+)>$/);
     if (mention) {
       const m = members.find((x) => x.id === mention[1]);
@@ -31,7 +34,7 @@ export function encodeMentions(text: string, members: Member[]): string {
 }
 
 export function decodeMentions(body: string, members: Member[]): string {
-  return body.replace(/<@([a-z0-9_-]+)>/g, (_, id) => "@" + (members.find((m) => m.id === id)?.name ?? id));
+  return body.replace(/<meeting:[a-f0-9]+>/g, "📅 Réunion").replace(/<@([a-z0-9_-]+)>/g, (_, id) => "@" + (members.find((m) => m.id === id)?.name ?? id));
 }
 
 export function channelTitle(ch: Channel, members: Member[], meId?: string): string {

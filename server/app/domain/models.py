@@ -103,3 +103,35 @@ class PresenceLog(Base):
 
     member_id: Mapped[str] = mapped_column(ForeignKey("members.id"), primary_key=True)
     last_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class Meeting(Base):
+    """Une réunion de l'agenda HQ, avec son lien visio et son compte rendu."""
+
+    __tablename__ = "meetings"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    title: Mapped[str] = mapped_column(String(160))
+    description: Mapped[str] = mapped_column(Text, default="")
+    start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    organizer_id: Mapped[str] = mapped_column(ForeignKey("members.id"))
+    link_kind: Mapped[str] = mapped_column(String(10), default="jitsi")  # jitsi | meet | none
+    link: Mapped[str] = mapped_column(String(300), default="")
+    channel_id: Mapped[Optional[str]] = mapped_column(ForeignKey("channels.id"), nullable=True)
+    reminder_minutes: Mapped[int] = mapped_column(Integer, default=10)
+    reminded: Mapped[bool] = mapped_column(Boolean, default=False)
+    cancelled: Mapped[bool] = mapped_column(Boolean, default=False)
+    notes: Mapped[str] = mapped_column(Text, default="")
+    notes_by: Mapped[Optional[str]] = mapped_column(ForeignKey("members.id"), nullable=True)
+    notes_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class MeetingAttendee(Base):
+    __tablename__ = "meeting_attendees"
+
+    meeting_id: Mapped[str] = mapped_column(ForeignKey("meetings.id", ondelete="CASCADE"), primary_key=True)
+    member_id: Mapped[str] = mapped_column(ForeignKey("members.id"), primary_key=True)
+    response: Mapped[str] = mapped_column(String(10), default="pending")  # pending | yes | maybe | no
+    joined_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

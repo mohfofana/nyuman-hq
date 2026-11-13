@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 import { useLive } from "../lib/live";
 import { Bell, CalendarDays, FolderOpen, House, LayoutList, MessagesSquare, Search, Users } from "lucide-react";
 import { StatusMenu } from "./StatusMenu";
+import { Toasts } from "./Toasts";
 
 export const NAV = [
   { to: "/accueil", label: "Accueil", icon: House },
@@ -88,6 +89,7 @@ export function Shell() {
           <div key={useLocation().pathname.split("/")[1]} className="page-in h-full"><Outlet /></div>
         </main>
       </div>
+      <Toasts />
       <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-line bg-white/95 px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden">
         {NAV.map((n) => <NavItem key={n.to} {...n} mobile />)}
       </nav>

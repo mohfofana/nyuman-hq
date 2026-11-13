@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     # Dossier des fichiers envoyés (en ligne : stockage S3 plus tard).
     upload_dir: str = "uploads"
     max_upload_mb: int = 25
+    # Visio
+    jitsi_base: str = "https://meet.jit.si"
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_refresh_token: str = ""
 
 
 settings = Settings()

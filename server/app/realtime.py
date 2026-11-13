@@ -21,6 +21,8 @@ class Hub:
         # membre -> {connexion: "active" | "idle"}
         self.conns: Dict[str, Dict[WebSocket, str]] = {}
         self.last_seen: Dict[str, datetime] = {}
+        # membres « En réunion » (calculé par le planificateur des réunions)
+        self.in_meeting: set = set()
         self._lock = asyncio.Lock()
 
     # ----- présence -----
@@ -31,6 +33,7 @@ class Hub:
             "member_id": member_id,
             "connected": bool(states),
             "idle": bool(states) and all(s == "idle" for s in states),
+            "in_meeting": member_id in self.in_meeting,
             "last_seen": last.isoformat() if last else None,
         }
 

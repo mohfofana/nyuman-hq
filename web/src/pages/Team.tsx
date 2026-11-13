@@ -98,7 +98,7 @@ function Fiche({ m, onClose }: { m: Member; onClose: () => void }) {
               <Link to={`/discussions?avec=${m.id}`} className="flex items-center justify-center gap-2 rounded-full bg-accent py-2.5 text-sm font-semibold text-white shadow-sm shadow-accent/30 hover:bg-accent-hover">
                 <MessageSquare size={16} /> Message
               </Link>
-              <Link to="/agenda" className="flex items-center justify-center gap-2 rounded-full border border-line py-2.5 text-sm font-semibold hover:bg-surface">
+              <Link to={`/agenda?nouvelle=1&avec=${m.id}`} className="flex items-center justify-center gap-2 rounded-full border border-line py-2.5 text-sm font-semibold hover:bg-surface">
                 <CalendarPlus size={16} /> Réunion
               </Link>
             </div>

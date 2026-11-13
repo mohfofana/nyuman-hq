@@ -7,10 +7,31 @@ import { Avatar } from "../components/Avatar";
 import { Panel, PresencePill, SoonTag } from "../components/ui";
 import { presenceOf } from "../lib/presence";
 import { ActivityRow, NotifButton, useActivity } from "./Activity";
+import { useEffect } from "react";
+import { meetings, type Meeting } from "../lib/api";
+import { MeetingCard } from "../components/MeetingCard";
 
 function greeting() {
   const h = new Date().getHours();
   return h < 12 ? "Bonjour" : h < 18 ? "Bon après-midi" : "Bonsoir";
+}
+
+function Upcoming() {
+  const { subscribe } = useLive();
+  const [list, setList] = useState<Meeting[] | null>(null);
+  useEffect(() => { meetings.upcoming().then(setList); }, []);
+  useEffect(() => subscribe((ev) => { if (String(ev.type).startsWith("meeting.")) meetings.upcoming().then(setList); }), [subscribe]);
+  return (
+    <Panel title="Mes prochaines réunions" action={<Link to="/agenda" className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline">Agenda <ArrowRight size={14} /></Link>}>
+      {list && list.length === 0 && (
+        <Link to="/agenda?nouvelle=1" className="flex items-center gap-3 rounded-2xl bg-surface p-4 text-sm text-ink-soft hover:bg-surface-2">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-soft text-blue"><CalendarPlus size={18} /></span>
+          Aucune réunion prévue. Planifier une réunion →
+        </Link>
+      )}
+      <div className="space-y-2">{list?.slice(0, 3).map((m) => <MeetingCard key={m.id} id={m.id} initial={m} />)}</div>
+    </Panel>
+  );
 }
 
 function TodayCard() {
@@ -43,7 +64,7 @@ function TodayCard() {
 
 const SHORTCUTS = [
   { icon: MessageSquarePlus, label: "Ouvrir les discussions", to: "/discussions", tone: "bg-accent-soft text-accent", ready: true },
-  { icon: CalendarPlus, label: "Planifier une réunion", to: "/agenda", tone: "bg-blue-soft text-blue" },
+  { icon: CalendarPlus, label: "Planifier une réunion", to: "/agenda?nouvelle=1", tone: "bg-blue-soft text-blue", ready: true },
   { icon: FilePlus2, label: "Nouvelle page projet", to: "/projets", tone: "bg-sun-soft text-[#9A6B00]" },
 ];
 
@@ -98,6 +119,7 @@ export function Home() {
         </Panel>
 
         <div className="space-y-5">
+          <Upcoming />
           <Panel title="Raccourcis">
             <div className="grid gap-2">
               {SHORTCUTS.map(({ icon: Icon, label, to, tone, ready }: any) => (

@@ -63,7 +63,7 @@ export type Message = {
 
 export type ActivityItem = { kind: "mention" | "reply"; message: Message };
 
-export type PresenceSnap = { member_id: string; connected: boolean; idle: boolean; last_seen: string | null };
+export type PresenceSnap = { member_id: string; connected: boolean; idle: boolean; in_meeting?: boolean; last_seen: string | null };
 
 export const chat = {
   channels: () => req<Channel[]>("/api/channels"),
@@ -92,4 +92,44 @@ export const chat = {
     if (!res.ok) throw Object.assign(new Error((await res.json().catch(() => ({}))).detail ?? res.statusText), { status: res.status });
     return res.json();
   },
+};
+
+export type Meeting = {
+  id: string;
+  title: string;
+  description: string;
+  start_at: string;
+  end_at: string;
+  organizer_id: string;
+  link_kind: "jitsi" | "meet" | "none";
+  link: string;
+  channel_id: string | null;
+  reminder_minutes: number;
+  cancelled: boolean;
+  notes: string;
+  notes_by: string | null;
+  notes_at: string | null;
+  attendees: { member_id: string; response: "pending" | "yes" | "maybe" | "no"; joined: boolean }[];
+};
+
+export type MeetingInput = {
+  title: string; description: string; start_at: string; end_at: string; attendee_ids: string[];
+  link_kind: string; channel_id: string | null; reminder_minutes: number;
+};
+
+export const meetings = {
+  config: () => req<{ google_meet: boolean; jitsi: boolean }>("/api/meetings/config"),
+  range: (start: Date, end: Date) =>
+    req<Meeting[]>(`/api/meetings?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`),
+  upcoming: () => req<Meeting[]>("/api/meetings/upcoming"),
+  get: (id: string) => req<Meeting>(`/api/meetings/${id}`),
+  create: (d: MeetingInput) => req<Meeting>("/api/meetings", { method: "POST", body: JSON.stringify(d) }),
+  update: (id: string, d: Partial<MeetingInput>) => req<Meeting>(`/api/meetings/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
+  cancel: (id: string) => req<Meeting>(`/api/meetings/${id}/cancel`, { method: "POST" }),
+  respond: (id: string, response: string) =>
+    req<Meeting>(`/api/meetings/${id}/respond`, { method: "POST", body: JSON.stringify({ response }) }),
+  join: (id: string) => req<{ link: string }>(`/api/meetings/${id}/join`, { method: "POST" }),
+  saveNotes: (id: string, notes: string) =>
+    req<Meeting>(`/api/meetings/${id}/notes`, { method: "PUT", body: JSON.stringify({ notes }) }),
+  publishNotes: (id: string) => req<{ channel_id: string }>(`/api/meetings/${id}/notes/publish`, { method: "POST" }),
 };

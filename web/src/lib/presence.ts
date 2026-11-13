@@ -31,6 +31,8 @@ export function presenceOf(m: Member, _me?: Member | null): Presence {
   let auto: Presence = "offline";
   if (s?.connected) auto = s.idle ? "away" : "online";
   else if (s?.last_seen && Date.now() - new Date(s.last_seen).getTime() < AWAY_AFTER_LEAVE_MS) auto = "away";
+  if (m.manual_status === "dnd" && auto !== "offline") return "dnd";
+  if (s?.in_meeting) return "meeting";
   if (m.manual_status && auto !== "offline") return m.manual_status;
   return auto;
 }

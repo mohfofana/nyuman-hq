@@ -142,10 +142,10 @@ function ChatView({ channel }: { channel: Channel }) {
               {members.length > 5 && <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-2 text-[11px] font-semibold ring-2 ring-white">+{members.length - 5}</span>}
             </div>
           )}
-          <button disabled title="Réunion : arrive avec l'agenda"
-            className="hidden items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-sm font-medium text-ink-muted sm:flex">
-            <Video size={16} /> Réunion
-          </button>
+          <Link to={`/agenda?nouvelle=1&canal=${channel.id}${channel.kind === "dm" ? `&avec=${others.map((o) => o.id).join(",")}` : ""}`}
+            title="Planifier une réunion" className="flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-sm font-medium text-ink-soft transition hover:border-blue/40 hover:text-blue">
+            <Video size={16} /> <span className="hidden sm:inline">Réunion</span>
+          </Link>
         </header>
         {loading ? <div className="flex-1" /> : (
           <MessageList messages={messages} members={members} me={me} onReply={(m) => openThread(m.id)}
