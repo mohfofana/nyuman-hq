@@ -6,6 +6,10 @@ lance ce guetteur en fond, et l'app la prévient dès qu'il s'arrête. Elle rép
 elle-même dans HQ, avec tout le contexte de son travail en cours.
 
     python3 scripts/attendre-message.py kwame [minutes]
+
+La discussion le relance dès qu'il l'a prévenue : il est ainsi toujours en poste.
+Si personne ne répond dans HQ, le serveur lance la copie au bout de HQ_AGENT_WAKE_GRACE_S
+(3 minutes par défaut), donc un message ne reste jamais sans réponse.
 """
 import os
 import subprocess
@@ -13,7 +17,7 @@ import sys
 import time
 
 AGENT = sys.argv[1] if len(sys.argv) > 1 else "kwame"
-MINUTES = float(sys.argv[2]) if len(sys.argv) > 2 else 240
+MINUTES = float(sys.argv[2]) if len(sys.argv) > 2 else 720
 DB = os.environ.get("HQ_DB_NAME", "nyuman_hq")
 EVERY_S = 15
 

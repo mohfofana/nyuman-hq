@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     agent_max_budget_usd: float = 0.25
     # Agents dont la discussion Claude est déjà ouverte : HQ ne lance pas de copie, c'est elle qui répond.
     agent_wake_skip: str = ""
+    # Délai laissé à une discussion ouverte pour répondre avant que la copie prenne le relais.
+    agent_wake_grace_s: int = 180
     agent_workdir: str = ""  # dossier où tourne l'agent (sa mémoire d'équipe est liée à ce dossier)
     # Chiffres de l'app (totaux seulement, route /admin/hq-stats de nyuman-api). Clé posée par Kevin, jamais lue par Kwame.
     stats_url: str = ""  # ex. https://<api staging>/admin/hq-stats

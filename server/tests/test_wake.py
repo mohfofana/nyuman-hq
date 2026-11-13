@@ -1,7 +1,10 @@
 import asyncio
 
 import pytest
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
+
+from app.main import app
 
 from app.config import settings
 from app.db import SessionLocal
@@ -25,7 +28,7 @@ def fake_runner(monkeypatch):
 
 
 async def settle():
-    for _ in range(50):
+    for _ in range(80):
         if not waker.tasks:
             return
         await asyncio.sleep(0.02)
@@ -87,14 +90,28 @@ async def test_messages_rapproches_regroupes(mohamed, fake_runner):
     assert len(fake_runner) <= 2  # le premier réveil, puis un seul pour les messages arrivés pendant
 
 
-async def test_agent_avec_discussion_ouverte_pas_reveille(mohamed, fake_runner, monkeypatch):
-    """Kwame a sa discussion Claude ouverte : HQ ne lance pas de copie, elle lit HQ elle-même."""
+async def test_discussion_ouverte_repond_elle_meme(mohamed, fake_runner, monkeypatch):
+    """Kwame a sa discussion Claude ouverte : si elle répond dans les 3 minutes, aucune copie ne part."""
     monkeypatch.setattr(settings, "agent_wake_skip", "kwame")
+    monkeypatch.setattr(settings, "agent_wake_grace_s", 0.15)
     dm = (await mohamed.post("/api/dms", json={"member_ids": ["kwame"]})).json()["id"]
     await mohamed.post(f"/api/channels/{dm}/messages", json={"body": "Kwame, la vue téléphone est à revoir."})
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test", headers={"X-HQ-Agent": "kwame"}) as k:
+        await k.post(f"/api/channels/{dm}/messages", json={"body": "C'est corrigé, je vous envoie une capture."})
     await settle()
     assert fake_runner == []
+    # Les autres agents gardent le réveil immédiat.
     autre = (await mohamed.post("/api/dms", json={"member_ids": ["koffi"]})).json()["id"]
     await mohamed.post(f"/api/channels/{autre}/messages", json={"body": "Koffi, votre avis ?"})
     await settle()
     assert [c[0] for c in fake_runner] == ["koffi"]
+
+
+async def test_filet_de_securite_si_personne_ne_repond(mohamed, fake_runner, monkeypatch):
+    """Fenêtre fermée : après le délai de grâce, la copie prend le relais."""
+    monkeypatch.setattr(settings, "agent_wake_skip", "kwame")
+    monkeypatch.setattr(settings, "agent_wake_grace_s", 0.15)
+    dm = (await mohamed.post("/api/dms", json={"member_ids": ["kwame"]})).json()["id"]
+    await mohamed.post(f"/api/channels/{dm}/messages", json={"body": "Kwame, vous êtes là ?"})
+    await settle()
+    assert [c[0] for c in fake_runner] == ["kwame"]

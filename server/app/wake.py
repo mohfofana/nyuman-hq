@@ -136,16 +136,36 @@ class Waker:
                 ids = (await s.scalars(select(ChannelMember.member_id).where(ChannelMember.channel_id == channel.id))).all()
             targets |= {m for m in ids if m in hub.agents}
         targets.discard(author.id)
-        # Un agent dont la discussion Claude est ouverte lit lui-même HQ : pas de copie lancée.
-        targets -= {a.strip() for a in settings.agent_wake_skip.split(",") if a.strip()}
+        # Agents dont la discussion Claude est ouverte : elle répond elle-même, avec son contexte.
+        # On laisse 3 minutes, puis on lance la copie si rien n'est venu (fenêtre fermée, agent occupé).
+        open_chats = {a.strip() for a in settings.agent_wake_skip.split(",") if a.strip()} & targets
+        targets -= open_chats
+        for agent in open_chats:
+            self._spawn(self._fallback(agent, msg))
         for agent in targets:
-            self.pending.setdefault(agent, []).append(msg.id)
-            if agent not in self.busy:
-                self.busy.add(agent)
-                t = asyncio.create_task(self._work(agent))
-                self.tasks.add(t)
-                t.add_done_callback(self.tasks.discard)
+            self.queue(agent, msg.id)
         return sorted(targets)
+
+    def _spawn(self, coro) -> None:
+        t = asyncio.create_task(coro)
+        self.tasks.add(t)
+        t.add_done_callback(self.tasks.discard)
+
+    def queue(self, agent: str, message_id: str) -> None:
+        self.pending.setdefault(agent, []).append(message_id)
+        if agent not in self.busy:
+            self.busy.add(agent)
+            self._spawn(self._work(agent))
+
+    async def _fallback(self, agent: str, msg: Message) -> None:
+        """Filet de sécurité : si la discussion ouverte n'a pas répondu, la copie prend le relais."""
+        await asyncio.sleep(settings.agent_wake_grace_s)
+        async with SessionLocal() as s:
+            answered = await s.scalar(select(func.count()).select_from(Message).where(
+                Message.channel_id == msg.channel_id, Message.author_id == agent,
+                Message.created_at > msg.created_at, Message.deleted.is_(False)))
+        if not answered:
+            self.queue(agent, msg.id)
 
     async def runs_today(self, agent: str) -> int:
         start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
