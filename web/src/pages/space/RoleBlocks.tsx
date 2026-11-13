@@ -1,7 +1,7 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AlertTriangle, ArrowRight, Bot, Gavel, MessageCircle, PartyPopper, Plus, Store } from "lucide-react";
-import { chat, fmtMinutes, type MiniTask, type Role, type Space } from "../../lib/api";
+import { appStatsApi, chat, fmtMinutes, type AppStats, type AppStatsResponse, type MiniTask, type Role, type Space } from "../../lib/api";
 import { useSession } from "../../lib/session";
 import { Avatar } from "../../components/Avatar";
 import { Panel, SoonTag } from "../../components/ui";
@@ -174,23 +174,60 @@ function DeptTasks({ space, role }: { space: Space; role: Role }) {
   );
 }
 
-const APP_FIGURES: Partial<Record<Role, string[]>> = {
-  dg: ["Pros actives", "Réservations (30 j)", "Acomptes encaissés (30 j)", "Litiges ouverts"],
-  growth: ["Pros inscrites", "Pros actives", "Avec une 1re réservation", "Nouvelles (7 j)"],
-  ops: ["Litiges ouverts", "Retraits bloqués", "Retraits en attente", "Plus vieux litige"],
-  finance: ["Acomptes encaissés (30 j)", "Frais (30 j)", "Retraits en attente", "Retraits bloqués"],
-  tech: ["Version en ligne", "Dernier déploiement"],
+const F = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} F`;
+type Fig = { label: string; value: (s: AppStats) => ReactNode; sub?: (s: AppStats) => ReactNode; alert?: (s: AppStats) => boolean };
+const APP_FIGURES: Partial<Record<Role, Fig[]>> = {
+  dg: [
+    { label: "Pros actives", value: (s) => s.growth.pros_active, sub: (s) => `${s.growth.pros_total} inscrites` },
+    { label: "Réservations payées (30 j)", value: (s) => s.reservations["30d"].paid, sub: (s) => `${s.reservations["30d"].completed} honorées` },
+    { label: "Acomptes encaissés (30 j)", value: (s) => F(s.finance["30d"].deposits_fcfa), sub: (s) => `frais ${F(s.finance["30d"].fees_fcfa)}` },
+    { label: "Litiges ouverts", value: (s) => s.operations.open_disputes, alert: (s) => s.operations.open_disputes > 0 },
+  ],
+  growth: [
+    { label: "Pros inscrites", value: (s) => s.growth.pros_total, sub: (s) => `+${s.growth.new_pros_7d} en 7 jours` },
+    { label: "Pros actives", value: (s) => s.growth.pros_active },
+    { label: "Avec une 1re réservation", value: (s) => s.growth.pros_with_completed },
+    { label: "Réservations payées (7 j)", value: (s) => s.reservations["7d"].paid, sub: (s) => `${s.reservations["30d"].paid} sur 30 j` },
+  ],
+  ops: [
+    { label: "Litiges ouverts", value: (s) => s.operations.open_disputes, alert: (s) => s.operations.open_disputes > 0,
+      sub: (s) => s.operations.oldest_dispute_days != null ? `le plus vieux : ${s.operations.oldest_dispute_days} j` : "aucun" },
+    { label: "Retraits bloqués", value: (s) => s.withdrawals.blocked.count, sub: (s) => F(s.withdrawals.blocked.amount_fcfa), alert: (s) => s.withdrawals.blocked.count > 0 },
+    { label: "Retraits en attente", value: (s) => s.withdrawals.pending.count, sub: (s) => F(s.withdrawals.pending.amount_fcfa) },
+    { label: "Annulations (30 j)", value: (s) => s.reservations["30d"].cancelled },
+  ],
+  finance: [
+    { label: "Acomptes encaissés (30 j)", value: (s) => F(s.finance["30d"].deposits_fcfa), sub: (s) => `${F(s.finance["7d"].deposits_fcfa)} sur 7 j` },
+    { label: "Frais gardés (30 j)", value: (s) => F(s.finance["30d"].fees_fcfa), sub: (s) => `${F(s.finance["7d"].fees_fcfa)} sur 7 j` },
+    { label: "Retraits en attente", value: (s) => F(s.withdrawals.pending.amount_fcfa), sub: (s) => `${s.withdrawals.pending.count} retraits` },
+    { label: "Retraits bloqués", value: (s) => F(s.withdrawals.blocked.amount_fcfa), sub: (s) => `${s.withdrawals.blocked.count} retraits`, alert: (s) => s.withdrawals.blocked.count > 0 },
+  ],
 };
 
+let statsPromise: Promise<AppStatsResponse> | null = null;
+export function useAppStats() {
+  const [r, setR] = useState<AppStatsResponse | null>(null);
+  useEffect(() => {
+    statsPromise ??= appStatsApi.get().finally(() => setTimeout(() => { statsPromise = null; }, 60_000));
+    statsPromise.then(setR).catch(() => setR({ available: false }));
+  }, []);
+  return r;
+}
+
 function AppFigures({ role }: { role: Role }) {
-  const names = APP_FIGURES[role];
-  if (!names) return null;
+  const figs = APP_FIGURES[role];
+  const r = useAppStats();
+  if (!figs) return null;
+  const s = r?.available ? r.stats : undefined;
   return (
-    <Panel title="Chiffres de l'app" action={<SoonTag>Bientôt</SoonTag>}>
+    <Panel title="Chiffres de l'app" action={s ? <span className="text-[11px] text-ink-muted">{r?.stale ? "dernier chiffre connu" : "en direct"}</span> : <SoonTag>Bientôt</SoonTag>}>
       <div className="grid grid-cols-2 gap-2">
-        {names.map((n) => <Tile key={n} label={n} value={<span className="text-ink-muted">—</span>} />)}
+        {figs.map((f) => (
+          <Tile key={f.label} label={f.label} value={s ? f.value(s) : <span className="text-ink-muted">—</span>}
+            tone={s && f.alert?.(s) ? "text-busy" : ""} sub={s && f.sub ? f.sub(s) : undefined} />
+        ))}
       </div>
-      <p className="mt-2 text-xs text-ink-muted">En direct de l'app dès que Kodjo aura ouvert l'accès en lecture seule (demandé le 13/11).</p>
+      {!s && <p className="mt-2 text-xs text-ink-muted">La route est prête chez Kodjo. Elle s'affichera dès que Kevin aura posé la clé et que Mohamed aura donné son feu vert pour la mettre en ligne.</p>}
     </Panel>
   );
 }
@@ -210,6 +247,8 @@ function GrowthBlock({ space }: { space: Space }) {
 }
 
 function LaunchCard({ days }: { days: number }) {
+  const r = useAppStats();
+  const active = r?.available && r.stats ? r.stats.growth.pros_active : null;
   return (
     <Panel>
       <div className="flex items-center gap-4">
@@ -220,7 +259,7 @@ function LaunchCard({ days }: { days: number }) {
         </div>
         <div className="ml-auto text-right">
           <div className="text-sm text-ink-soft">Objectif</div>
-          <div className="text-2xl font-semibold tracking-tight">300 <span className="text-sm font-normal text-ink-soft">pros</span></div>
+          <div className="text-2xl font-semibold tracking-tight">{active != null ? `${active} / ` : ""}300 <span className="text-sm font-normal text-ink-soft">pros</span></div>
         </div>
       </div>
     </Panel>
@@ -268,7 +307,7 @@ export function RoleBlocks({ space }: { space: Space }) {
   }
   for (const role of ["growth", "ops", "finance", "tech"] as Role[]) if (r.has(role)) left.push(<DeptTasks key={`t-${role}`} space={space} role={role} />);
   if (space.ai_cost) right.push(<AiCost key="ai" space={space} />);
-  for (const role of ["dg", "growth", "ops", "finance", "tech"] as Role[]) if (r.has(role)) right.push(<AppFigures key={`f-${role}`} role={role} />);
+  for (const role of ["dg", "growth", "ops", "finance"] as Role[]) if (r.has(role)) right.push(<AppFigures key={`f-${role}`} role={role} />);
   if (!left.length && !right.length) return null;
   return (
     <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">

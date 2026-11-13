@@ -277,3 +277,15 @@ export type Space = {
   dept?: Partial<Record<Role, { department: string; open: number; overdue: number; urgent: MiniTask[] }>>;
 };
 export const spaceApi = { get: () => req<Space>("/api/space") };
+
+// ---------- chiffres de l'app (totaux seulement, via nyuman-api) ----------
+export type AppStats = {
+  generated_at: string;
+  growth: { pros_total: number; pros_active: number; pros_with_completed: number; new_pros_7d: number };
+  reservations: Record<"7d" | "30d", { paid: number; completed: number; cancelled: number }>;
+  finance: Record<"7d" | "30d", { deposits_fcfa: number; fees_fcfa: number }>;
+  withdrawals: Record<"pending" | "blocked", { count: number; amount_fcfa: number }>;
+  operations: { open_disputes: number; oldest_dispute_days: number | null };
+};
+export type AppStatsResponse = { available: boolean; stale?: boolean; reason?: string; stats?: AppStats };
+export const appStatsApi = { get: () => req<AppStatsResponse>("/api/app-stats") };
