@@ -303,15 +303,15 @@ const F = (n: number) => `${Math.round(n).toLocaleString("fr-FR")} F`;
 type Fig = { label: string; value: (s: AppStats) => ReactNode; sub?: (s: AppStats) => ReactNode; alert?: (s: AppStats) => boolean };
 const APP_FIGURES: Partial<Record<Role, Fig[]>> = {
   dg: [
-    { label: "Pros actives", value: (s) => s.growth.pros_active, sub: (s) => `${s.growth.pros_total} inscrites` },
+    { label: "Salons qui ont travaillé", value: (s) => s.growth.pros_with_completed, sub: (s) => `${s.growth.pros_total} comptes créés` },
     { label: "Réservations payées (30 j)", value: (s) => s.reservations["30d"].paid, sub: (s) => `${s.reservations["30d"].completed} honorées` },
     { label: "Acomptes encaissés (30 j)", value: (s) => F(s.finance["30d"].deposits_fcfa), sub: (s) => `frais ${F(s.finance["30d"].fees_fcfa)}` },
     { label: "Litiges ouverts", value: (s) => s.operations.open_disputes, alert: (s) => s.operations.open_disputes > 0 },
   ],
   growth: [
-    { label: "Pros inscrites", value: (s) => s.growth.pros_total, sub: (s) => `+${s.growth.new_pros_7d} en 7 jours` },
-    { label: "Pros actives", value: (s) => s.growth.pros_active },
-    { label: "Avec une 1re réservation", value: (s) => s.growth.pros_with_completed },
+    { label: "Comptes de coiffeuses créés", value: (s) => s.growth.pros_total, sub: (s) => `+${s.growth.new_pros_7d} en 7 jours` },
+    { label: "Comptes non suspendus", value: (s) => s.growth.pros_active },
+    { label: "Ont eu une réservation honorée", value: (s) => s.growth.pros_with_completed },
     { label: "Réservations payées (7 j)", value: (s) => s.reservations["7d"].paid, sub: (s) => `${s.reservations["30d"].paid} sur 30 j` },
   ],
   ops: [
@@ -379,7 +379,7 @@ function GrowthBlock({ space }: { space: Space }) {
 
 function LaunchCard({ days }: { days: number }) {
   const r = useAppStats();
-  const active = r?.available && r.stats ? r.stats.growth.pros_active : null;
+  const worked = r?.available && r.stats ? r.stats.growth.pros_with_completed : null;
   return (
     <Panel>
       <div className="flex items-center gap-4">
@@ -390,7 +390,8 @@ function LaunchCard({ days }: { days: number }) {
         </div>
         <div className="ml-auto text-right">
           <div className="text-sm text-ink-soft">Objectif</div>
-          <div className="text-2xl font-semibold tracking-tight">{active != null ? `${active} / ` : ""}300 <span className="text-sm font-normal text-ink-soft">pros</span></div>
+          <div className="text-2xl font-semibold tracking-tight">{worked != null ? `${worked} / ` : ""}300 <span className="text-sm font-normal text-ink-soft">pros</span></div>
+          {worked != null && <div className="text-[11px] text-ink-muted">salons qui ont honoré une réservation</div>}
         </div>
       </div>
     </Panel>
