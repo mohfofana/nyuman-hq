@@ -27,6 +27,11 @@ async def update_me(body: MemberUpdate, me: Member = Depends(current_member),
     allowed = AGENT_STATUSES if me.kind == "agent" else MANUAL_STATUSES
     if "manual_status" in data and data["manual_status"] not in allowed:
         raise HTTPException(400, "Statut inconnu")
+    if "work_days" in data:
+        days = sorted({d for d in (data["work_days"] or "").split(",") if d in {"1", "2", "3", "4", "5", "6", "7"}})
+        data["work_days"] = ",".join(days)
+    if "ask_hour" in data and data["ask_hour"] is not None and not 6 <= data["ask_hour"] <= 23:
+        raise HTTPException(400, "Heure entre 6 h et 23 h")
     me = await session.merge(me)
     for key, value in data.items():
         setattr(me, key, value)

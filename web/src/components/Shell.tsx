@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useLive } from "../lib/live";
-import { Bell, CalendarDays, FolderOpen, House, LayoutList, MessagesSquare, Search, Users } from "lucide-react";
+import { Bell, CalendarDays, FolderOpen, House, LayoutList, MessagesSquare, Search, Timer, Users } from "lucide-react";
 import { StatusMenu } from "./StatusMenu";
 import { Toasts } from "./Toasts";
 
@@ -10,6 +10,7 @@ export const NAV = [
   { to: "/discussions", label: "Discussions", icon: MessagesSquare },
   { to: "/agenda", label: "Agenda", icon: CalendarDays },
   { to: "/projets", label: "Projets", icon: LayoutList },
+  { to: "/temps", label: "Temps", icon: Timer },
   { to: "/fichiers", label: "Fichiers", icon: FolderOpen },
   { to: "/equipe", label: "Équipe", icon: Users },
 ];

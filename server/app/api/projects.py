@@ -35,6 +35,7 @@ class ProjectPatch(BaseModel):
     department: Optional[str] = Field(default=None, max_length=60)
     owner_id: Optional[str] = None
     archived: Optional[bool] = None
+    hours_budget: Optional[int] = Field(default=None, ge=0, le=100000)
 
 
 class PageIn(BaseModel):
@@ -81,7 +82,7 @@ class TaskPatch(BaseModel):
 def project_out(p: Project, counts: Optional[dict] = None) -> dict:
     return {"id": p.id, "name": p.name, "icon": p.icon, "description": p.description, "department": p.department,
             "owner_id": p.owner_id, "created_by": p.created_by, "archived": p.archived, "created_at": p.created_at,
-            "counts": counts or {}}
+            "hours_budget": p.hours_budget, "counts": counts or {}}
 
 
 def page_out(p: Page, full: bool = False) -> dict:

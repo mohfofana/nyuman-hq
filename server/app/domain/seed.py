@@ -27,6 +27,11 @@ TEAM = [
          role="Point du lundi, décisions en attente, lien avec la direction."),
     dict(id="kwame", name="Kwame", kind="agent", title="Construction de HQ",
          role="Construit Nyuman HQ, le QG de l'équipe."),
+    # Ajoutés le 13/11 à la demande de Mohamed : un agent pour chaque responsable qui n'en avait pas.
+    dict(id="aminata", name="Aminata", kind="agent", title="Croissance et lancement",
+         role="Messages aux salons, contenus, suivi de chaque salon jusqu'à sa 1re réservation, lancement du 12/12."),
+    dict(id="yao", name="Yao", kind="agent", title="Opérations et juridique",
+         role="Contrats (Jèko, FeexPay, salons), litiges, réponses au support, conformité."),
 ]
 
 
@@ -76,6 +81,8 @@ POSITIONS = [
 # Appui des agents (proposition de Kwame) : un agent n'occupe jamais un poste, il appuie la personne qui le tient.
 AGENT_SUPPORT = [(9, "adjoua"), (10, "kodjo"), (1, "koffi"), (2, "mariam"), (10, "kwame")]
 # Placements validés par Mohamed le 13/11 (équipe donnée le même jour).
+# Appuis ajoutés après coup (13/11) : posés une fois s'ils manquent.
+LATER_SUPPORT = [(3, "aminata"), (7, "yao")]
 HOLDERS = [(1, "mohamed"), (2, "marie-sophie"), (3, "abraham"), (7, "sullyvan"), (9, "carmel"), (10, "kevin")]
 
 
@@ -92,4 +99,7 @@ async def seed_org(session: AsyncSession) -> None:
     for pid, mid in HOLDERS:
         if (pid, mid) not in links and await session.get(Member, mid) is not None:
             session.add(PositionHolder(position_id=pid, member_id=mid, kind="holder"))
+    for pid, mid in LATER_SUPPORT:
+        if (pid, mid) not in links and await session.get(Member, mid) is not None:
+            session.add(PositionHolder(position_id=pid, member_id=mid, kind="support"))
     await session.commit()

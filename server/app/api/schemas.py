@@ -19,6 +19,8 @@ class MemberOut(BaseModel):
     schedule: str
     manual_status: Optional[str]
     status_message: str
+    work_days: str = "1,2,3,4,5"
+    ask_hour: Optional[int] = 19
 
 
 class DevLoginIn(BaseModel):
@@ -30,3 +32,5 @@ class MemberUpdate(BaseModel):
     schedule: Optional[str] = None
     manual_status: Optional[str] = None
     status_message: Optional[str] = None
+    work_days: Optional[str] = None
+    ask_hour: Optional[int] = None

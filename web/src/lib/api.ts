@@ -10,6 +10,8 @@ export type Member = {
   schedule: string;
   manual_status: "busy" | "dnd" | "working" | "waiting" | "blocked" | null;
   status_message: string;
+  work_days: string;
+  ask_hour: number | null;
 };
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
@@ -150,6 +152,7 @@ export type TaskStatus = "todo" | "doing" | "review" | "done";
 export type Project = {
   id: string; name: string; icon: string; description: string; department: string; owner_id: string | null;
   created_by: string; archived: boolean; created_at: string; counts: Partial<Record<TaskStatus, number>>;
+  hours_budget: number | null;
 };
 export type PageMeta = {
   id: string; project_id: string; parent_id: string | null; title: string; icon: string; position: number;
@@ -182,3 +185,41 @@ export type AgentRunSummary = {
   agents: Record<string, { today: number; cap: number; month_cost_usd: number; last_status: string | null; last_at: string | null; last_error: string }>;
 };
 export const agentsApi = { runs: () => req<AgentRunSummary>("/api/auth/agents/runs") };
+
+// ---------- suivi du temps (déclaré, jamais mesuré) ----------
+export type TimeEntry = {
+  id: string; member_id: string; day: string; project_id: string; project_name: string; project_icon: string;
+  task_id: string | null; task_title: string | null; minutes: number; note: string;
+};
+export type MyTime = { start: string; end: string; entries: TimeEntry[]; days_off: string[]; work_days: string; ask_hour: number | null };
+export type TimeSuggestions = {
+  day: string;
+  tasks: { id: string; title: string; status: TaskStatus; project_id: string; project_name: string }[];
+  projects: { id: string; name: string; icon: string }[];
+};
+export type TeamTime = {
+  start: string; end: string; days: number;
+  projects: { id: string; name: string; icon: string; owner_id: string | null; minutes: number; total_minutes: number;
+    hours_budget: number | null; budget_pct: number | null; last_day: string | null; inactive: boolean }[];
+  people: { member_id: string; minutes: number; projects: Record<string, number> }[] | null;
+};
+export const timeApi = {
+  me: (start?: string, end?: string) => req<MyTime>(`/api/time/me?${new URLSearchParams({ ...(start ? { start } : {}), ...(end ? { end } : {}) })}`),
+  suggestions: (day: string) => req<TimeSuggestions>(`/api/time/suggestions?day=${day}`),
+  add: (d: { day: string; project_id?: string; task_id?: string; minutes: number; note?: string }) =>
+    req<TimeEntry>("/api/time", { method: "POST", body: JSON.stringify(d) }),
+  remove: (id: string) => req<void>(`/api/time/${id}`, { method: "DELETE" }),
+  off: (day: string) => req<void>("/api/time/off", { method: "POST", body: JSON.stringify({ day }) }),
+  undoOff: (day: string) => req<void>(`/api/time/off/${day}`, { method: "DELETE" }),
+  team: (days: number) => req<TeamTime>(`/api/time/team?days=${days}`),
+};
+
+export function fmtMinutes(min: number): string {
+  if (!min) return "0 h";
+  const h = Math.floor(min / 60), m = min % 60;
+  if (!h) return `${m} min`;
+  return m ? `${h} h ${String(m).padStart(2, "0")}` : `${h} h`;
+}
+
+/** Jour local au format AAAA-MM-JJ (Abidjan = UTC). */
+export const isoDay = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;

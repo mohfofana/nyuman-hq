@@ -11,6 +11,7 @@ import { Activity } from "./pages/Activity";
 import { SearchPage } from "./pages/SearchPage";
 import { Agenda } from "./pages/agenda/Agenda";
 import { Projects } from "./pages/projects/Projects";
+import { TimePage } from "./pages/Time";
 
 export default function App() {
   const { me, loading } = useSession();
@@ -28,6 +29,7 @@ export default function App() {
         <Route path="/projets" element={<Projects />} />
         <Route path="/projets/:projectId" element={<Projects />} />
         <Route path="/projets/:projectId/page/:pageId" element={<Projects />} />
+        <Route path="/temps" element={<TimePage />} />
         <Route path="/fichiers" element={<Preview kind="files" icon={FolderOpen} title="Fichiers" soon="Bientôt" tone="blue"
           text="Tous les fichiers partagés, rangés par canal et par projet."
           bullets={["Aperçu des images et PDF", "Anciennes versions gardées", "Qui a modifié quoi"]} />} />

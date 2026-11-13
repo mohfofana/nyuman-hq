@@ -297,6 +297,8 @@ async def scheduler() -> None:
         try:
             await send_reminders()
             await refresh_presence()
+            from app.api.timesheet import send_time_asks
+            await send_time_asks()
         except Exception as e:  # on ne laisse jamais tomber la boucle
             print("planificateur :", e)
         await asyncio.sleep(20)

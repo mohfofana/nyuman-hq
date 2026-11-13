@@ -26,6 +26,9 @@ class Member(Base):
     # Statut choisi à la main (busy / dnd) ; la présence automatique vient du temps réel.
     manual_status: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     status_message: Mapped[str] = mapped_column(String(160), default="")
+    # Suivi du temps (façon Gryzzly) : jours travaillés (1 = lundi … 7 = dimanche) et heure de la question du soir.
+    work_days: Mapped[str] = mapped_column(String(20), default="1,2,3,4,5", server_default="1,2,3,4,5")
+    ask_hour: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, default=19, server_default="19")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -184,6 +187,7 @@ class Project(Base):
     owner_id: Mapped[Optional[str]] = mapped_column(ForeignKey("members.id"), nullable=True)
     created_by: Mapped[str] = mapped_column(ForeignKey("members.id"))
     archived: Mapped[bool] = mapped_column(Boolean, default=False)
+    hours_budget: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # budget d'heures, facultatif
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -242,3 +246,29 @@ class AgentRun(Base):
     duration_s: Mapped[float] = mapped_column(Float, default=0)
     error: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
+class TimeEntry(Base):
+    """Temps déclaré par la personne elle-même (jamais mesuré) : un jour, un projet, éventuellement une tâche."""
+
+    __tablename__ = "time_entries"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    member_id: Mapped[str] = mapped_column(ForeignKey("members.id"), index=True)
+    day: Mapped[date] = mapped_column(Date, index=True)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    task_id: Mapped[Optional[str]] = mapped_column(ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True)
+    minutes: Mapped[int] = mapped_column(Integer)
+    note: Mapped[str] = mapped_column(String(300), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class TimeAsk(Base):
+    """La question du soir de Mariam : une par personne et par jour travaillé."""
+
+    __tablename__ = "time_asks"
+
+    member_id: Mapped[str] = mapped_column(ForeignKey("members.id"), primary_key=True)
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    state: Mapped[str] = mapped_column(String(10), default="asked")  # asked | answered | off
+    message_id: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)

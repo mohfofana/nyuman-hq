@@ -22,7 +22,7 @@ async def fresh_db():
         await seed_channels(s)
         await seed_org(s)
     from app.realtime import hub
-    hub.agents = {"kodjo", "adjoua", "koffi", "mariam", "kwame"}
+    hub.agents = {"kodjo", "adjoua", "koffi", "mariam", "kwame", "aminata", "yao"}
     yield
 
 

@@ -173,23 +173,29 @@ async def open_dm(body: DmIn, me: Member = Depends(current_member), session: Asy
     found = (await session.scalars(select(Member.id).where(Member.id.in_(wanted)))).all()
     if len(found) != len(wanted) or len(wanted) < 2:
         raise HTTPException(400, "Membres inconnus")
+    cid, created = await ensure_dm(session, wanted, me.id)
+    if created:
+        await hub.broadcast({"type": "channel.created", "channel_id": cid}, to=wanted)
+    return {"id": cid}
+
+
+async def ensure_dm(session: AsyncSession, wanted: Set[str], opener: str):
+    """Retrouve ou crée la discussion privée entre exactement ces membres. Renvoie (id, créée ?)."""
     # Un seul à la fois pour ce groupe de personnes (deux clics rapprochés ne créent pas deux discussions).
     await session.execute(sql_text("select pg_advisory_xact_lock(hashtext(:k))"), {"k": "dm:" + ",".join(sorted(wanted))})
-    # cherche une discussion privée avec exactement ces membres
     candidates = (await session.scalars(
-        select(ChannelMember.channel_id).join(Channel).where(Channel.kind == "dm", ChannelMember.member_id == me.id))).all()
+        select(ChannelMember.channel_id).join(Channel).where(Channel.kind == "dm", ChannelMember.member_id == opener))).all()
     for cid in candidates:
         ids = set((await session.scalars(select(ChannelMember.member_id).where(ChannelMember.channel_id == cid))).all())
         if ids == wanted:
-            return {"id": cid}
-    ch = Channel(kind="dm", created_by=me.id)
+            return cid, False
+    ch = Channel(kind="dm", created_by=opener)
     session.add(ch)
     await session.flush()
     for mid in wanted:
-        session.add(ChannelMember(channel_id=ch.id, member_id=mid, last_read_at=now() if mid == me.id else None))
+        session.add(ChannelMember(channel_id=ch.id, member_id=mid, last_read_at=now() if mid == opener else None))
     await session.commit()
-    await hub.broadcast({"type": "channel.created", "channel_id": ch.id}, to=wanted)
-    return {"id": ch.id}
+    return ch.id, True
 
 
 @router.post("/channels/{channel_id}/read", status_code=204)

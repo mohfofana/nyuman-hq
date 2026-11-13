@@ -196,6 +196,16 @@ tool("hq_reunions", "Vos prochaines réunions (titre, heure, lien, participants)
   return ms.map((m) => `${m.title} — ${new Date(m.start_at).toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short", timeZone: "Africa/Abidjan" })} · ${m.link || "sans lien"} · ${m.attendees.map((a) => nameOf(list, a.member_id) + " (" + a.response + ")").join(", ")} [id ${m.id}]`).join("\n");
 });
 
+tool("hq_temps", "Temps déclaré par l'équipe, par projet (et budget d'heures). Utile pour le bilan du vendredi. Jamais d'heures de connexion.",
+  { jours: z.number().int().min(1).max(92).optional().describe("période, 7 par défaut") },
+  async ({ jours }) => {
+    const t = await api("GET", `/api/time/team?days=${jours || 7}`);
+    const h = (m) => { const x = Math.floor(m / 60), y = m % 60; return y ? `${x} h ${String(y).padStart(2, "0")}` : `${x} h`; };
+    const lines = t.projects.filter((p) => p.minutes || p.hours_budget).map((p) =>
+      `${p.icon} ${p.name} : ${h(p.minutes)} sur la période` + (p.hours_budget ? ` · ${h(p.total_minutes)} sur ${p.hours_budget} h de budget (${p.budget_pct} %)` : "") + (p.inactive ? " · plus rien depuis 14 j" : ""));
+    return `Du ${t.start} au ${t.end}\n` + (lines.join("\n") || "Personne n'a encore rien noté.");
+  });
+
 tool("hq_planifier_reunion", "Planifie une réunion d'équipe avec lien Jitsi et l'annonce dans un canal. Heure d'Abidjan (UTC).",
   {
     titre: z.string().min(1).max(160),

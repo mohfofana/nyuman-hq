@@ -22,3 +22,13 @@ async def create_schema(eng=engine) -> None:
 
     async with eng.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Colonnes ajoutées après coup (pas d'Alembic : on reste simple et sans risque).
+        for stmt in LATER_COLUMNS:
+            await conn.exec_driver_sql(stmt)
+
+
+LATER_COLUMNS = [
+    "ALTER TABLE members ADD COLUMN IF NOT EXISTS work_days VARCHAR(20) NOT NULL DEFAULT '1,2,3,4,5'",
+    "ALTER TABLE members ADD COLUMN IF NOT EXISTS ask_hour INTEGER DEFAULT 19",
+    "ALTER TABLE projects ADD COLUMN IF NOT EXISTS hours_budget INTEGER",
+]

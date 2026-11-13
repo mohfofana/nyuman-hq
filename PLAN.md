@@ -26,15 +26,15 @@ Une pastille sur la photo de chacun, qui change toute seule :
 - Les agents ont la même pastille : 🟢 au travail, 🟡 en attente, 🔴 bloqué.
 Fonctionne sur ordinateur et sur téléphone, sans service payant (la connexion en direct du serveur suffit). Prévu à l'étape 3, et relié aux réunions à l'étape 4.
 
-## « Ma journée » (validé par Mohamed le 13/11, à juger une fois construit)
-On suit le travail, pas les personnes. La plupart des membres sont à temps partiel.
-- Chacun indique ses **créneaux** sur sa fiche (« mar et jeu soir, sam matin »).
-- Les jours travaillés seulement : le matin, 1 à 3 tâches du jour ; le soir, cocher ce qui est fait + une ligne de blocage. Aucun rappel hors créneaux.
-- Les heads voient l'avancement des tâches et les blocages, **jamais** les heures de connexion.
-- Chacun voit en privé son propre temps (comme le « Temps d'écran » du téléphone).
-- Hors créneaux : hors ligne = normal, notifications en sourdine (sauf mention urgente).
-- Vendredi : bilan de la semaine comparé à ce que chacun avait prévu, sans classement.
-- Aucune capture d'écran, aucun suivi hors de HQ.
+## Suivi du temps façon Gryzzly (validé par Mohamed le 13/11, remplace « Ma journée »)
+On suit le travail, pas les personnes : **chacun déclare lui-même son temps**, rien n'est mesuré. La plupart des membres sont à temps partiel.
+- Chacun choisit ses **jours travaillés** et l'**heure de la question** (17 h à 22 h, ou jamais) dans Temps.
+- Le soir de ces jours seulement, **Mariam** envoie en message privé une carte « Aujourd'hui, sur quoi ? » : on touche une tâche ou un projet (proposés d'après ses tâches en cours et ses projets récents), une durée approximative, et c'est noté. Bouton « Je n'ai pas travaillé ce jour-là ». Aucune relance. Cette carte ne réveille pas d'IA : coût nul.
+- Page **Temps** : ma semaine (jour par jour, total par projet, privé), et la vue **projets** (temps sur 7 ou 30 jours, budget d'heures, projets sans activité depuis 14 jours).
+- **Budget d'heures par projet** : Mariam prévient le responsable du projet à 80 % puis à 100 %.
+- Les heads voient le temps **par personne et par projet** ; jamais d'heures de connexion.
+- Les agents lisent le temps par projet (outil `hq_temps`) pour le bilan du vendredi.
+- Pas repris de Gryzzly : rentabilité par client (Nyuman n'est pas une agence), crédit d'impôt recherche (France).
 
 ## Règles de design (Mohamed, 13/11)
 - **Simple comme Teams** : barre d'icônes à gauche (Activité, Discussions, Agenda, Projets, Fichiers, Équipe), liste au milieu, contenu à droite. Une action évidente par écran.
