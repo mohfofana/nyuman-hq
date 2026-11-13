@@ -2,6 +2,10 @@ import os
 
 os.environ["HQ_DATABASE_URL"] = "postgresql+asyncpg://localhost/nyuman_hq_test"
 os.environ["HQ_UPLOAD_DIR"] = "/tmp/nyuman_hq_test_uploads"
+# Les tests ne réveillent jamais un vrai agent et n'appellent jamais l'app, quoi que dise server/.env.
+os.environ["HQ_AGENT_WAKE"] = "false"
+os.environ["HQ_STATS_URL"] = ""
+os.environ["HQ_STATS_KEY"] = ""
 
 import pytest  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
