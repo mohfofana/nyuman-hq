@@ -1,12 +1,22 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarClock, CalendarPlus, Check, CheckCircle2, MessageSquare, Pencil, Sparkles, Target, X } from "lucide-react";
+import { Briefcase, CalendarClock, CalendarPlus, Check, CheckCircle2, MessageSquare, Pencil, Sparkles, Target, X } from "lucide-react";
 import { useSession } from "../lib/session";
 import { useLive } from "../lib/live";
 import { Avatar, TINTS, tintIndex } from "../components/Avatar";
 import { Badge, PresencePill } from "../components/ui";
 import { presenceOf } from "../lib/presence";
 import type { Member } from "../lib/api";
+import { OrgChart, useOrg } from "./OrgChart";
+
+function usePosts(memberId: string) {
+  const { org } = useOrg();
+  if (!org) return { holds: [] as string[], supports: [] as string[] };
+  return {
+    holds: org.positions.filter((p) => p.holder_ids.includes(memberId)).map((p) => p.title),
+    supports: org.positions.filter((p) => p.support_ids.includes(memberId)).map((p) => p.title),
+  };
+}
 
 function Card({ m, onOpen }: { m: Member; onOpen: () => void }) {
   const { me } = useSession();
@@ -66,8 +76,11 @@ function Fiche({ m, onClose }: { m: Member; onClose: () => void }) {
   const p = presenceOf(m, me);
   const mine = me?.id === m.id;
   const tint = TINTS[tintIndex(m.id)].solid;
+  const posts = usePosts(m.id);
   const rows = [
     { icon: m.kind === "agent" ? Sparkles : Target, tone: "bg-accent-soft text-accent", label: "Son rôle", node: <div className="mt-1 text-sm leading-relaxed">{m.role}</div> },
+    { icon: Briefcase, tone: "bg-blue-soft text-blue", label: m.kind === "agent" ? "Appuie les postes" : "Poste",
+      node: <div className="mt-1 text-sm leading-relaxed">{(m.kind === "agent" ? posts.supports : posts.holds).join(" · ") || <span className="text-ink-muted">{m.kind === "agent" ? "Aucun pour l'instant" : "Pas encore placé dans l'organigramme"}</span>}</div> },
     { icon: Target, tone: "bg-sun-soft text-[#9A6B00]", label: "En ce moment",
       node: <Editable value={m.now_doing} empty="Rien d'indiqué" canEdit={mine} onSave={(v) => updateMe({ now_doing: v })} /> },
     { icon: CalendarClock, tone: "bg-blue-soft text-blue", label: "Créneaux",
@@ -131,6 +144,7 @@ export function Team() {
   useLive();
   const [openId, setOpenId] = useState<string | null>(null);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("all");
+  const [view, setView] = useState<"members" | "org">(() => (location.hash === "#organigramme" ? "org" : "members"));
   const shown = members.filter((m) => filter === "all" || m.kind === filter);
   const available = members.filter((m) => presenceOf(m, me) === "online").length;
   const open = members.find((m) => m.id === openId) ?? null;
@@ -145,18 +159,27 @@ export function Team() {
             <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-online" />{available} disponible{available > 1 ? "s" : ""}</span>
           </p>
         </div>
+        <div className="flex flex-wrap gap-2">
         <div className="flex rounded-full bg-white p-1 shadow-sm ring-1 ring-line">
+          {([["members", "Membres"], ["org", "Organigramme"]] as const).map(([v, l]) => (
+            <button key={v} onClick={() => { setView(v); history.replaceState(null, "", v === "org" ? "#organigramme" : "#"); }}
+              className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${view === v ? "bg-ink text-white" : "text-ink-soft hover:text-ink"}`}>{l}</button>
+          ))}
+        </div>
+        {view === "members" && <div className="flex rounded-full bg-white p-1 shadow-sm ring-1 ring-line">
           {FILTERS.map((f) => (
             <button key={f.id} onClick={() => setFilter(f.id)}
               className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${filter === f.id ? "bg-accent text-white shadow-sm" : "text-ink-soft hover:text-ink"}`}>
               {f.label}
             </button>
           ))}
+        </div>}
         </div>
       </div>
+      {view === "org" ? <div className="mt-6"><OrgChart /></div> : (
       <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
         {shown.map((m) => <Card key={m.id} m={m} onOpen={() => setOpenId(m.id)} />)}
-      </div>
+      </div>)}
       {open && <Fiche m={open} onClose={() => setOpenId(null)} />}
     </div>
   );

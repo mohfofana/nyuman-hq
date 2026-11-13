@@ -4,10 +4,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, chat, files, live, meetings, members
+from app.api import auth, chat, files, live, meetings, members, org
 from app.config import settings
 from app.db import SessionLocal, create_schema
-from app.domain.seed import seed, seed_channels
+from app.domain.seed import seed, seed_channels, seed_org
 
 
 @asynccontextmanager
@@ -16,6 +16,7 @@ async def lifespan(_app: FastAPI):
     async with SessionLocal() as session:
         await seed(session)
         await seed_channels(session)
+        await seed_org(session)
     task = asyncio.create_task(meetings.scheduler())
     yield
     task.cancel()
@@ -35,6 +36,7 @@ app.include_router(chat.router)
 app.include_router(files.router)
 app.include_router(live.router)
 app.include_router(meetings.router)
+app.include_router(org.router)
 
 
 @app.get("/api/health")

@@ -135,3 +135,26 @@ class MeetingAttendee(Base):
     member_id: Mapped[str] = mapped_column(ForeignKey("members.id"), primary_key=True)
     response: Mapped[str] = mapped_column(String(10), default="pending")  # pending | yes | maybe | no
     joined_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class Position(Base):
+    """Un poste de l'organisation (fiches de poste NYUMAN, 12/11/2026)."""
+
+    __tablename__ = "positions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)  # numéro du poste (1 à 12)
+    title: Mapped[str] = mapped_column(String(120))
+    department: Mapped[str] = mapped_column(String(60))
+    reports_to: Mapped[Optional[int]] = mapped_column(ForeignKey("positions.id"), nullable=True)
+    mission: Mapped[str] = mapped_column(String(300), default="")
+    hours: Mapped[str] = mapped_column(String(20), default="")
+
+
+class PositionHolder(Base):
+    """Qui tient le poste (humain) ou l'appuie (agent)."""
+
+    __tablename__ = "position_holders"
+
+    position_id: Mapped[int] = mapped_column(ForeignKey("positions.id", ondelete="CASCADE"), primary_key=True)
+    member_id: Mapped[str] = mapped_column(ForeignKey("members.id"), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(10), default="holder")  # holder | support

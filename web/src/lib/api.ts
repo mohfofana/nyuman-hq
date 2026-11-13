@@ -133,3 +133,15 @@ export const meetings = {
     req<Meeting>(`/api/meetings/${id}/notes`, { method: "PUT", body: JSON.stringify({ notes }) }),
   publishNotes: (id: string) => req<{ channel_id: string }>(`/api/meetings/${id}/notes/publish`, { method: "POST" }),
 };
+
+export type Position = {
+  id: number; title: string; department: string; reports_to: number | null;
+  mission: string; hours: string; holder_ids: string[]; support_ids: string[];
+};
+export type Org = { departments: string[]; positions: Position[] };
+
+export const orgApi = {
+  get: () => req<Org>("/api/org"),
+  set: (id: number, holder_ids: string[], support_ids: string[]) =>
+    req<Org>(`/api/org/positions/${id}`, { method: "PUT", body: JSON.stringify({ holder_ids, support_ids }) }),
+};

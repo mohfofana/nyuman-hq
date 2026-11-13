@@ -7,7 +7,7 @@ import pytest  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
 
 from app.db import Base, SessionLocal, create_schema, engine  # noqa: E402
-from app.domain.seed import seed, seed_channels  # noqa: E402
+from app.domain.seed import seed, seed_channels, seed_org  # noqa: E402
 from app.main import app  # noqa: E402
 
 
@@ -20,6 +20,7 @@ async def fresh_db():
     async with SessionLocal() as s:
         await seed(s)
         await seed_channels(s)
+        await seed_org(s)
     yield
 
 
