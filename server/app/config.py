@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     claude_bin: str = "claude"
     agent_daily_cap: int = 30
     agent_run_timeout_s: int = 240
-    agent_max_budget_usd: float = 0.5
+    agent_max_budget_usd: float = 0.25
     agent_workdir: str = ""  # dossier où tourne l'agent (sa mémoire d'équipe est liée à ce dossier)
 
 

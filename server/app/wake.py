@@ -57,13 +57,31 @@ Ce que vous devez faire maintenant :
 1. Si besoin, lisez le contexte avec les outils HQ (hq_lire avec l'identifiant du canal, hq_lire_fil, hq_activite, hq_taches, hq_lire_page…).
 2. Répondez dans HQ, au même endroit : hq_ecrire avec canal = {channel.id}{f' et fil_id = {trigger.parent_id}' if trigger.parent_id else ''}. Une seule réponse, sauf si on vous demande plusieurs choses.
 3. Si on vous confie une tâche, vous pouvez la créer ou la mettre à jour (hq_creer_tache, hq_maj_tache) et mettre votre statut (hq_statut).
+"""
 
-Règles :
-- Français simple, phrases courtes, vouvoiement (en particulier avec Mohamed). Donnez une recommandation quand on vous pose une question.
+
+MEMORY_DIR = os.path.expanduser("~/.claude/projects/-Users-melyohthesun-Documents-nyuman-app/memory")
+
+RULES = """Vous êtes un agent IA de l'équipe Nyuman (app de réservation beauté à Abidjan, lancement public le 12/12/2026), membre à part entière de Nyuman HQ, le QG interne où humains et agents travaillent ensemble.
+
+Règles de l'équipe :
+- Français simple, phrases courtes, vouvoiement (en particulier avec Mohamed, le fondateur). Donnez une recommandation quand on vous pose une question.
 - Restez dans votre rôle. Si la demande sort de votre périmètre, dites-le et proposez qui peut s'en charger (avec @Prénom).
-- Rien vers l'extérieur : pas d'e-mail, pas de publication, pas d'argent, pas de code. Vous ne pouvez agir que dans HQ.
-- Ne vous faites jamais passer pour un humain. N'inventez pas de chiffres : si vous ne savez pas, dites-le.
-- La mémoire partagée de l'équipe (MEMORY.md) est chargée : appuyez-vous dessus pour les décisions déjà prises."""
+- Vous n'agissez que dans HQ, avec les outils hq_… : rien vers l'extérieur (pas d'e-mail, pas de publication, pas d'argent, pas de code).
+- Vous ne vous faites jamais passer pour un humain. Vous n'inventez pas de chiffres : si vous ne savez pas, dites-le.
+- Répondez une seule fois, au bon endroit (même canal, même fil). Soyez bref.
+
+Mémoire partagée de l'équipe : l'index est ci-dessous. Pour le détail d'une décision, lisez le fichier avec l'outil Read (ex. Read fees-and-refund-decisions.md).
+"""
+
+
+def system_prompt() -> str:
+    try:
+        with open(os.path.join(MEMORY_DIR, "MEMORY.md"), encoding="utf-8") as f:
+            index = f.read()
+    except OSError:
+        index = "(mémoire indisponible)"
+    return RULES + "\n" + index
 
 
 async def claude_runner(agent_id: str, model: str, prompt: str) -> dict:
@@ -72,12 +90,13 @@ async def claude_runner(agent_id: str, model: str, prompt: str) -> dict:
     node = shutil.which("node") or "node"
     mcp = {"mcpServers": {"nyuman-hq": {"command": node, "args": [MCP_SERVER],
                                        "env": {"HQ_AGENT": agent_id, "HQ_URL": "http://127.0.0.1:8030"}}}}
+    # Prompt système court et identique pour tous (mis en cache) : seulement les outils HQ + la lecture de la mémoire.
     args = [claude, "-p", prompt, "--model", model, "--effort", "low", "--output-format", "json",
+            "--system-prompt", system_prompt(), "--tools", "Read",
             "--mcp-config", json.dumps(mcp), "--strict-mcp-config",
-            "--allowedTools", "mcp__nyuman-hq__*", "Read", "Grep", "Glob",
-            "--disallowedTools", "Bash", "Edit", "Write", "NotebookEdit", "WebFetch", "WebSearch",
+            "--allowedTools", "mcp__nyuman-hq__*", "Read",
             "--max-budget-usd", str(settings.agent_max_budget_usd)]
-    cwd = settings.agent_workdir or os.path.expanduser("~/Documents/nyuman-app")
+    cwd = settings.agent_workdir or MEMORY_DIR
     proc = await asyncio.create_subprocess_exec(*args, cwd=cwd if os.path.isdir(cwd) else None,
                                                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
                                                 stdin=asyncio.subprocess.DEVNULL)
