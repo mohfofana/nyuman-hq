@@ -1,9 +1,9 @@
-import { NavLink, Outlet } from "react-router-dom";
-import { Bell, CalendarDays, FolderOpen, LayoutList, MessagesSquare, Search, Users } from "lucide-react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { Bell, CalendarDays, FolderOpen, House, LayoutList, MessagesSquare, Search, Users } from "lucide-react";
 import { StatusMenu } from "./StatusMenu";
 
 export const NAV = [
-  { to: "/activite", label: "Activité", icon: Bell },
+  { to: "/accueil", label: "Accueil", icon: House },
   { to: "/discussions", label: "Discussions", icon: MessagesSquare },
   { to: "/agenda", label: "Agenda", icon: CalendarDays },
   { to: "/projets", label: "Projets", icon: LayoutList },
@@ -38,17 +38,24 @@ export function Shell() {
           <img src="/logo-wordmark.png" alt="Nyuman" className="logo-white h-4" />
           <span className="rounded-md bg-white/20 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide">HQ</span>
         </div>
-        <div className="mx-auto hidden w-full max-w-md items-center gap-2 rounded-full bg-white px-4 py-2 text-sm text-ink-muted shadow-sm sm:flex">
-          <Search size={16} className="text-accent" /> Rechercher des messages, fichiers, personnes
+        <div className="mx-auto hidden w-full max-w-lg items-center gap-2 rounded-xl bg-white px-3.5 py-2 text-sm text-ink-muted shadow-sm ring-1 ring-black/5 sm:flex">
+          <Search size={16} className="text-accent" />
+          <span className="flex-1">Rechercher des messages, fichiers, personnes</span>
+          <kbd className="rounded-md border border-line bg-surface px-1.5 py-0.5 text-[10px] font-medium text-ink-soft">⌘ K</kbd>
         </div>
-        <div className="ml-auto sm:ml-0"><StatusMenu /></div>
+        <div className="ml-auto flex items-center gap-2 sm:ml-0">
+          <button aria-label="Notifications" className="relative flex h-9 w-9 items-center justify-center rounded-full text-white hover:bg-white/15">
+            <Bell size={19} />
+          </button>
+          <StatusMenu />
+        </div>
       </header>
       <div className="flex min-h-0 flex-1">
-        <nav className="hidden w-20 shrink-0 flex-col items-center gap-0.5 border-r border-line bg-white py-3 sm:flex">
+        <nav className="hidden w-[84px] shrink-0 flex-col items-center gap-0.5 border-r border-line bg-white py-3 sm:flex">
           {NAV.map((n) => <NavItem key={n.to} {...n} />)}
         </nav>
         <main className="min-w-0 flex-1 overflow-y-auto pb-20 sm:pb-0">
-          <Outlet />
+          <div key={useLocation().pathname} className="page-in h-full"><Outlet /></div>
         </main>
       </div>
       <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-line bg-white/95 px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden">
