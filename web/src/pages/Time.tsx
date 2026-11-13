@@ -127,7 +127,7 @@ function AskSettings() {
   return (
     <section className="rounded-2xl border border-line bg-white p-4 shadow-sm">
       <h2 className="text-sm font-semibold">La question du soir</h2>
-      <p className="mb-3 mt-0.5 text-xs text-ink-soft">Mariam vous demande « sur quoi ? » en message privé, seulement les jours où vous travaillez.</p>
+      <p className="mb-3 mt-0.5 text-xs text-ink-soft">Maeve vous demande « sur quoi ? » en message privé, seulement les jours où vous travaillez.</p>
       <p className="mb-1.5 text-xs font-medium text-ink-soft">Mes jours</p>
       <div className="mb-3 flex gap-1">
         {WEEKDAYS.map((w, i) => {

@@ -176,7 +176,11 @@ export function Discussions() {
     const avec = params.get("avec");
     if (!avec || opening.current === avec) return;
     opening.current = avec;
-    chat.openDm([avec]).then(async ({ id }) => { await refreshChannels(); navigate(`/discussions/${id}`, { replace: true }); });
+    const texte = params.get("texte");
+    chat.openDm([avec]).then(async ({ id }) => {
+      await refreshChannels();
+      navigate(`/discussions/${id}${texte ? `?texte=${encodeURIComponent(texte)}` : ""}`, { replace: true });
+    });
   }, [params]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sur ordinateur, on ouvre « général » par défaut.

@@ -266,7 +266,7 @@ class TimeEntry(Base):
 
 
 class TimeAsk(Base):
-    """La question du soir de Mariam : une par personne et par jour travaillé."""
+    """La question du soir de Maeve : une par personne et par jour travaillé."""
 
     __tablename__ = "time_asks"
 

@@ -1,6 +1,6 @@
 # Connecteur Claude de Nyuman HQ (MCP)
 
-Permet aux agents (Kodjo, Adjoua, Koffi, Mariam, Kwame…) de travailler dans HQ comme membres de l'équipe.
+Permet aux agents (Kodjo, Adjoua, Koffi, Maeve, Kwame…) de travailler dans HQ comme membres de l'équipe.
 
 ## Installation (déjà faite sur le Mac le 13/11, portée « utilisateur »)
 ```bash

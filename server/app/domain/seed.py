@@ -23,7 +23,8 @@ TEAM = [
          role="Frais, prix, acomptes, projections, trésorerie."),
     dict(id="koffi", name="Koffi", kind="agent", title="Contradicteur",
          role="Relit chaque décision importante, dit non avec chiffres et alternative."),
-    dict(id="mariam", name="Mariam", kind="agent", title="Chef de cabinet",
+    # Renommée Maeve par Mohamed le 13/11 ; l'identifiant reste "mariam" pour garder tout son historique.
+    dict(id="mariam", name="Maeve", kind="agent", title="Chef de cabinet",
          role="Point du lundi, décisions en attente, lien avec la direction."),
     dict(id="kwame", name="Kwame", kind="agent", title="Construction de HQ",
          role="Construit Nyuman HQ, le QG de l'équipe."),

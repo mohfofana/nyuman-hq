@@ -1,0 +1,59 @@
+# Mise en ligne de Nyuman HQ sur le VPS, de la même façon que nyuman-api.
+# Kevin pose les mêmes secrets que pour l'API (VPS_HOST, VPS_PORT, VPS_USER, VPS_SSH_KEY)
+# et dépose une fois le fichier .env dans le dossier sur le VPS. Kwame ne lit aucun secret.
+name: Mettre HQ en ligne
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Déployer sur le VPS
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          port: ${{ secrets.VPS_PORT }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          envs: GH_TOKEN
+          script: |
+            set -e
+            DIR=/home/deploy/app/nyuman-hq
+
+            # 1. Récupérer le code
+            if [ ! -d "$DIR/.git" ]; then
+              echo "Premier déploiement : clonage."
+              git clone https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git "$DIR"
+            fi
+            cd "$DIR"
+            git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git
+            git fetch --all --prune
+            git reset --hard origin/main
+
+            # 2. Le fichier des secrets doit déjà être là (posé une fois par Kevin)
+            if [ ! -f .env ]; then
+              echo "ERREUR : $DIR/.env manquant. Le créer à partir de server/.env.example."
+              exit 1
+            fi
+
+            # 3. Construire et démarrer
+            docker compose up -d --build
+            docker image prune -f
+
+            # 4. Vérifier que HQ répond
+            for i in $(seq 1 30); do
+              if curl -fs http://localhost:8030/api/auth/google/status > /dev/null; then
+                echo "HQ répond."
+                exit 0
+              fi
+              sleep 2
+            done
+            echo "HQ ne répond pas, voici les dernières lignes :"
+            docker compose logs hq --tail 50
+            exit 1

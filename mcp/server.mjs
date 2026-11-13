@@ -2,7 +2,7 @@
 /**
  * Connecteur Claude (MCP) de Nyuman HQ.
  *
- * Les agents (Kodjo, Adjoua, Koffi, Mariam, Kwame…) l'utilisent pour lire et écrire dans HQ
+ * Les agents (Kodjo, Adjoua, Koffi, Maeve, Kwame…) l'utilisent pour lire et écrire dans HQ
  * comme membres de l'équipe : discussions, mentions, réunions, organigramme, statut.
  *
  * Réglages (variables d'environnement) :

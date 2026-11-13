@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { FileText, Loader2, Paperclip, SendHorizontal, Smile, X } from "lucide-react";
 import { chat, type Attachment, type Member } from "../../lib/api";
 import { useLive } from "../../lib/live";
@@ -9,7 +10,10 @@ export function Composer({ channelId, parentId, members, me, placeholder, autoFo
   channelId: string; parentId?: string | null; members: Member[]; me: Member; placeholder: string; autoFocus?: boolean;
 }) {
   const { sendTyping } = useLive();
-  const [text, setText] = useState("");
+  const [params] = useSearchParams();
+  // Un bouton d'ailleurs peut proposer un message tout prêt : /discussions/<id>?texte=…
+  const prefill = params.get("texte") ?? "";
+  const [text, setText] = useState(prefill);
   const [files, setFiles] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(0);
   const [error, setError] = useState("");
@@ -20,7 +24,8 @@ export function Composer({ channelId, parentId, members, me, placeholder, autoFo
   const ta = useRef<HTMLTextAreaElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { setText(""); setFiles([]); setError(""); }, [channelId, parentId]);
+  // En changeant de discussion, on repart d'une zone vide — ou du message proposé s'il y en a un.
+  useEffect(() => { setText(prefill); setFiles([]); setError(""); }, [channelId, parentId, prefill]);
   useEffect(() => {
     const el = ta.current;
     if (!el) return;

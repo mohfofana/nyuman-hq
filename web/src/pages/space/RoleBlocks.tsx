@@ -1,11 +1,33 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AlertTriangle, ArrowRight, Bot, Gavel, MessageCircle, PartyPopper, Plus, Store } from "lucide-react";
-import { appStatsApi, chat, fmtMinutes, type AppStats, type AppStatsResponse, type MiniTask, type Role, type Space } from "../../lib/api";
+import { AlertTriangle, ArrowRight, Bot, Gavel, MessageCircle, PartyPopper, Plus, Sparkles, Store } from "lucide-react";
+import { appStatsApi, fmtMinutes, type AppStats, type AppStatsResponse, type MiniTask, type Role, type Space } from "../../lib/api";
 import { useSession } from "../../lib/session";
 import { Avatar } from "../../components/Avatar";
 import { Panel, SoonTag } from "../../components/ui";
 import { TrackList } from "../../components/TrackList";
+
+/** Ce qu'on demande le plus souvent à son agent, prêt à envoyer. Un clic = un réveil (quelques centimes). */
+export const AGENT_ASKS: Record<Role, string[]> = {
+  dg: ["Relis la dernière décision et dis-moi ce qui cloche",
+       "Donne ton avis sur la proposition en cours",
+       "Prépare-moi 3 questions pour le point de la semaine"],
+  coord: ["Prépare mon point du lundi",
+          "Qui est en retard, et sur quoi ?",
+          "Liste les décisions en attente"],
+  growth: ["Écris un message aux salons inscrits qui n'ont pas eu de réservation",
+           "Où en est-on du 12 décembre ?",
+           "Propose 3 contenus pour cette semaine"],
+  ops: ["Résume les litiges ouverts et ce qu'il faut faire",
+        "Quelles échéances arrivent ce mois-ci ?",
+        "Relis le dernier contrat et dis-moi les risques"],
+  finance: ["Fais le point de trésorerie",
+            "Calcule la marge du mois",
+            "Prépare les chiffres du prochain comité"],
+  tech: ["Où en est le prochain build ?",
+         "Qu'est-ce qui bloque côté app en ce moment ?",
+         "Résume ce qui a changé cette semaine"],
+};
 
 export const ROLE_LABEL: Record<Role, string> = {
   dg: "Direction générale", coord: "Coordination", growth: "Croissance", ops: "Opérations et juridique", finance: "Finance", tech: "Produit et technique",
@@ -20,7 +42,9 @@ export function MyPostCard({ space }: { space: Space }) {
   const { members } = useSession();
   const navigate = useNavigate();
   const agents = space.agents.map((id) => members.find((m) => m.id === id)).filter(Boolean) as typeof members;
-  const ask = async (id: string) => { const r = await chat.openDm([id]); navigate(`/discussions/${r.id}`); };
+  const asks = space.roles.flatMap((r) => AGENT_ASKS[r] ?? []).slice(0, 3);
+  const ask = (agentId: string, texte?: string) =>
+    navigate(`/discussions?avec=${agentId}${texte ? `&texte=${encodeURIComponent(texte)}` : ""}`);
   return (
     <div className="rounded-2xl bg-white p-4 text-ink shadow-[0_16px_32px_-16px_rgba(188,96,13,0.35)] sm:p-5">
       <div className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Mon poste</div>
@@ -29,21 +53,30 @@ export function MyPostCard({ space }: { space: Space }) {
       ) : (
         <p className="mt-1 text-sm text-ink-soft">Pas encore de poste dans l'organigramme. <Link to="/equipe" className="text-accent hover:underline">Voir l'équipe</Link></p>
       )}
-      {agents.length > 0 && (
-        <div className="mt-4 space-y-2">
-          {agents.map((a) => (
-            <button key={a.id} onClick={() => ask(a.id)}
-              className="flex w-full items-center gap-3 rounded-xl border border-line px-3 py-2 text-left transition hover:border-accent/40 hover:bg-accent-soft/40">
-              <Avatar member={a} size="sm" />
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold">Demander à {a.name}</span>
-                <span className="block truncate text-xs text-ink-soft">{a.title}</span>
-              </span>
-              <MessageCircle size={16} className="text-accent" />
-            </button>
-          ))}
+      {agents.map((a) => (
+        <div key={a.id} className="mt-4">
+          <button onClick={() => ask(a.id)}
+            className="flex w-full items-center gap-3 rounded-xl border border-line px-3 py-2 text-left transition hover:border-accent/40 hover:bg-accent-soft/40">
+            <Avatar member={a} size="sm" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold">{a.name}, votre agent</span>
+              <span className="block truncate text-xs text-ink-soft">{a.title}</span>
+            </span>
+            <MessageCircle size={16} className="text-accent" />
+          </button>
+          {a.id === agents[0].id && asks.length > 0 && (
+            <div className="mt-2 space-y-1.5">
+              {asks.map((t) => (
+                <button key={t} onClick={() => ask(a.id, t)}
+                  className="flex w-full items-start gap-2 rounded-xl bg-surface px-3 py-2 text-left text-[13px] leading-snug transition hover:bg-accent-soft">
+                  <Sparkles size={13} className="mt-0.5 shrink-0 text-accent" /> {t}
+                </button>
+              ))}
+              <p className="pt-0.5 text-[11px] text-ink-muted">Le message s'écrit tout seul : vous relisez avant d'envoyer.</p>
+            </div>
+          )}
         </div>
-      )}
+      ))}
     </div>
   );
 }
@@ -58,11 +91,15 @@ function Tile({ label, value, tone = "", sub }: { label: string; value: ReactNod
   );
 }
 
-function TaskLine({ t }: { t: MiniTask }) {
-  const { members } = useSession();
+function TaskLine({ t, relance }: { t: MiniTask; relance?: boolean }) {
+  const { me, members } = useSession();
+  const navigate = useNavigate();
   const who = members.find((m) => m.id === t.assignee_id);
   const today = new Date().toISOString().slice(0, 10);
-  const late = t.due_date && t.due_date < today;
+  const late = !!t.due_date && t.due_date < today;
+  const texte = t.due_date
+    ? `Bonjour ${who?.name.split(" ")[0] ?? ""}, où en est « ${t.title} » ? C'était pour le ${new Date(t.due_date + "T12:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}.`
+    : `Bonjour ${who?.name.split(" ")[0] ?? ""}, où en est « ${t.title} » ?`;
   return (
     <li className="flex items-center gap-2.5 py-2">
       {who ? <Avatar member={who} size="sm" /> : <span className="h-7 w-7 shrink-0 rounded-full border border-dashed border-line" />}
@@ -73,6 +110,12 @@ function TaskLine({ t }: { t: MiniTask }) {
       {t.priority === "high" && <span className="rounded-full bg-[#FDE6E2] px-2 py-0.5 text-[10px] font-semibold text-[#B5321F]">Urgent</span>}
       {t.due_date && <span className={`shrink-0 text-xs ${late ? "font-medium text-busy" : "text-ink-soft"}`}>
         {late ? "en retard" : new Date(t.due_date + "T12:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" })}</span>}
+      {relance && who && who.id !== me?.id && (
+        <button onClick={() => navigate(`/discussions?avec=${who.id}&texte=${encodeURIComponent(texte)}`)}
+          className="shrink-0 rounded-lg bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent hover:bg-accent hover:text-white">
+          Relancer
+        </button>
+      )}
     </li>
   );
 }
@@ -142,15 +185,52 @@ function Departments({ space }: { space: Space }) {
 }
 
 function WeekDue({ space }: { space: Space }) {
-  const list = space.week_due ?? [];
+  const { members } = useSession();
+  const navigate = useNavigate();
+  const today = new Date().toISOString().slice(0, 10);
+  const all = space.week_due ?? [];
+  const late = all.filter((t) => t.due_date && t.due_date < today);
+  const soon = all.filter((t) => !late.includes(t));
   return (
-    <Panel title="Échéances des 7 prochains jours (toute l'équipe)" action={more("/projets")}>
-      {list.length === 0 ? <p className="rounded-2xl bg-surface p-4 text-sm text-ink-soft">Aucune échéance cette semaine.</p>
-        : <ul className="divide-y divide-line">{list.slice(0, 8).map((t) => <TaskLine key={t.id} t={t} />)}</ul>}
+    <Panel title="À faire avancer" action={more("/projets")}>
+      {all.length === 0 ? <p className="rounded-2xl bg-surface p-4 text-sm text-ink-soft">Rien n'est en retard et rien n'arrive à échéance cette semaine.</p> : (
+        <>
+          {late.length > 0 && (
+            <>
+              <h3 className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-busy">
+                <AlertTriangle size={12} /> En retard · {late.length}
+              </h3>
+              <ul className="divide-y divide-line">{late.slice(0, 6).map((t) => <TaskLine key={t.id} t={t} relance />)}</ul>
+            </>
+          )}
+          {soon.length > 0 && (
+            <>
+              <h3 className={`mb-1 text-xs font-semibold uppercase tracking-wide text-ink-muted ${late.length ? "mt-4" : ""}`}>Cette semaine · {soon.length}</h3>
+              <ul className="divide-y divide-line">{soon.slice(0, 6).map((t) => <TaskLine key={t.id} t={t} relance />)}</ul>
+            </>
+          )}
+        </>
+      )}
       {space.quiet_projects && space.quiet_projects.length > 0 && (
-        <p className="mt-3 rounded-xl bg-surface px-3 py-2 text-xs text-ink-soft">
-          Rien n'a bougé depuis 14 jours : {space.quiet_projects.map((p) => `${p.icon} ${p.name}`).join(", ")}.
-        </p>
+        <div className="mt-4">
+          <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-ink-muted">Rien n'a bougé depuis 14 jours</h3>
+          <ul className="divide-y divide-line">
+            {space.quiet_projects.map((p) => {
+              const owner = members.find((m) => m.id === p.owner_id);
+              return (
+                <li key={p.id} className="flex items-center gap-2.5 py-2">
+                  <Link to={`/projets/${p.id}`} className="min-w-0 flex-1 truncate text-sm font-medium hover:text-accent">{p.icon} {p.name}</Link>
+                  {owner && (
+                    <button onClick={() => navigate(`/discussions?avec=${owner.id}&texte=${encodeURIComponent(`Bonjour ${owner.name.split(" ")[0]}, où en est le projet « ${p.name} » ? Rien n'a bougé depuis deux semaines.`)}`)}
+                      className="shrink-0 rounded-lg bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent hover:bg-accent hover:text-white">
+                      Demander à {owner.name.split(" ")[0]}
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       )}
     </Panel>
   );
@@ -169,7 +249,7 @@ function DeptTasks({ space, role }: { space: Space; role: Role }) {
         <p className="rounded-2xl bg-surface p-4 text-sm text-ink-soft">
           Rien d'urgent. {d.open === 0 && <>Créez un projet du département « {d.department} » pour que ses tâches arrivent ici.</>}
         </p>
-      ) : <ul className="divide-y divide-line">{d.urgent.map((t) => <TaskLine key={t.id} t={t} />)}</ul>}
+      ) : <ul className="divide-y divide-line">{d.urgent.map((t) => <TaskLine key={t.id} t={t} relance />)}</ul>}
     </Panel>
   );
 }

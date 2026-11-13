@@ -1,6 +1,6 @@
 """Suivi du temps façon Gryzzly : chacun déclare lui-même où est passé son temps (rien n'est mesuré en cachette).
 
-- Mariam pose la question le soir des jours travaillés, en message privé (une carte à remplir en 10 secondes).
+- Maeve pose la question le soir des jours travaillés, en message privé (une carte à remplir en 10 secondes).
 - Chacun voit son propre temps ; les heads voient le temps par projet et par personne, et les budgets d'heures.
 """
 from __future__ import annotations
@@ -236,7 +236,7 @@ async def team(days: int = 7, me: Member = Depends(current_member), session: Asy
     return {"start": start, "end": end, "days": days, "projects": out_projects, "people": people}
 
 
-# ---------- alertes et question du soir (postées par Mariam, sans IA : aucun coût) ----------
+# ---------- alertes et question du soir (postées par Maeve, sans IA : aucun coût) ----------
 async def post_as_asker(session: AsyncSession, member_id: str, body: str) -> Optional[Message]:
     from app.api.chat import emit_message, ensure_dm
 
@@ -272,7 +272,7 @@ async def budget_alert(project_id: str, before: int, after: int) -> None:
 
 
 async def send_time_asks(at: Optional[datetime] = None) -> List[str]:
-    """Le soir des jours travaillés de chacun, Mariam demande « Aujourd'hui, sur quoi ? » (une seule fois)."""
+    """Le soir des jours travaillés de chacun, Maeve demande « Aujourd'hui, sur quoi ? » (une seule fois)."""
     local = (at or now()).astimezone(TZ)
     day, weekday = local.date(), str(local.isoweekday())
     asked = []

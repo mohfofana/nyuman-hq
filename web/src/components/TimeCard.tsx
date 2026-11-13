@@ -146,7 +146,7 @@ function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; chi
   );
 }
 
-/** La carte que Mariam envoie le soir dans la discussion privée. */
+/** La carte que Maeve envoie le soir dans la discussion privée. */
 export function TimeCard({ day }: { day: string }) {
   const { me } = useSession();
   if (!me || me.kind !== "human") {

@@ -26,7 +26,7 @@ from app.domain.models import AgentRun, Channel, ChannelMember, Member, Message
 from app.realtime import hub, now
 
 MCP_SERVER = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "mcp", "server.mjs"))
-# Choix de Mohamed (13/11) : Opus 4.6 effort low pour tous, Sonnet 5.5 pour Mariam.
+# Choix de Mohamed (13/11) : Opus 4.6 effort low pour tous, Sonnet 5.5 pour Maeve.
 AGENT_MODELS = {"mariam": "claude-sonnet-5-5"}
 DEFAULT_MODEL = "claude-opus-4-6"
 MENTION = "<@{}>"

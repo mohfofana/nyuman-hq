@@ -13,7 +13,7 @@
    - **Équipe** : une fiche par membre (humain ou agent), ouverte en cliquant sur sa photo : poste, rôle, ce qu'il fait maintenant, ce qu'il a terminé, statut de présence. Rien d'autre.
    - **Salle du conseil** : seulement les **propositions** (texte, chiffres, avis de Koffi) et le **vote** des heads.
    - **Mis de côté pour plus tard** : journal des décisions revu à 30 jours, file de validation, journal d'actions des agents.
-8. **Branché sur Claude** : un **serveur MCP propre à HQ**, pour que les agents (Kodjo, Adjoua, Koffi, Mariam, Kwame…) lisent et écrivent dans HQ (messages, tâches, documents, décisions) comme aujourd'hui avec Notion. Chaque agent a son jeton et apparaît comme membre.
+8. **Branché sur Claude** : un **serveur MCP propre à HQ**, pour que les agents (Kodjo, Adjoua, Koffi, Maeve, Kwame…) lisent et écrivent dans HQ (messages, tâches, documents, décisions) comme aujourd'hui avec Notion. Chaque agent a son jeton et apparaît comme membre.
 9. **Pas d'e-mail** : on garde Gmail.
 
 ## Présence automatique, comme Teams (demandé par Mohamed le 13/11)
@@ -41,9 +41,9 @@ L'accueil devient **Mon espace**. Il suit le **poste tenu dans l'organigramme**,
 ## Suivi du temps façon Gryzzly (validé par Mohamed le 13/11, remplace « Ma journée »)
 On suit le travail, pas les personnes : **chacun déclare lui-même son temps**, rien n'est mesuré. La plupart des membres sont à temps partiel.
 - Chacun choisit ses **jours travaillés** et l'**heure de la question** (17 h à 22 h, ou jamais) dans Temps.
-- Le soir de ces jours seulement, **Mariam** envoie en message privé une carte « Aujourd'hui, sur quoi ? » : on touche une tâche ou un projet (proposés d'après ses tâches en cours et ses projets récents), une durée approximative, et c'est noté. Bouton « Je n'ai pas travaillé ce jour-là ». Aucune relance. Cette carte ne réveille pas d'IA : coût nul.
+- Le soir de ces jours seulement, **Maeve** envoie en message privé une carte « Aujourd'hui, sur quoi ? » : on touche une tâche ou un projet (proposés d'après ses tâches en cours et ses projets récents), une durée approximative, et c'est noté. Bouton « Je n'ai pas travaillé ce jour-là ». Aucune relance. Cette carte ne réveille pas d'IA : coût nul.
 - Page **Temps** : ma semaine (jour par jour, total par projet, privé), et la vue **projets** (temps sur 7 ou 30 jours, budget d'heures, projets sans activité depuis 14 jours).
-- **Budget d'heures par projet** : Mariam prévient le responsable du projet à 80 % puis à 100 %.
+- **Budget d'heures par projet** : Maeve prévient le responsable du projet à 80 % puis à 100 %.
 - Les heads voient le temps **par personne et par projet** ; jamais d'heures de connexion.
 - Les agents lisent le temps par projet (outil `hq_temps`) pour le bilan du vendredi.
 - Pas repris de Gryzzly : rentabilité par client (Nyuman n'est pas une agence), crédit d'impôt recherche (France).
