@@ -2,7 +2,7 @@ async def test_organigramme_12_postes(mohamed):
     org = (await mohamed.get("/api/org")).json()
     assert len(org["positions"]) == 12 and len(org["departments"]) == 5
     p10 = next(p for p in org["positions"] if p["id"] == 10)
-    assert p10["reports_to"] == 1 and p10["support_ids"] == ["kodjo", "kwame"] and p10["holder_ids"] == []
+    assert p10["reports_to"] == 1 and p10["support_ids"] == ["kodjo", "kwame"] and p10["holder_ids"] == ["kevin"]
 
 
 async def test_head_place_une_personne(mohamed):

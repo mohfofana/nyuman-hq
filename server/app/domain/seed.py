@@ -66,6 +66,8 @@ POSITIONS = [
 
 # Appui des agents (proposition de Kwame) : un agent n'occupe jamais un poste, il appuie la personne qui le tient.
 AGENT_SUPPORT = [(9, "adjoua"), (10, "kodjo"), (1, "koffi"), (2, "mariam"), (10, "kwame")]
+# Placements validés par Mohamed le 13/11.
+HOLDERS = [(1, "mohamed"), (7, "sullyvan"), (10, "kevin")]
 
 
 async def seed_org(session: AsyncSession) -> None:
@@ -75,4 +77,6 @@ async def seed_org(session: AsyncSession) -> None:
         await session.flush()
         for pid, mid in AGENT_SUPPORT:
             session.add(PositionHolder(position_id=pid, member_id=mid, kind="support"))
+        for pid, mid in HOLDERS:
+            session.add(PositionHolder(position_id=pid, member_id=mid, kind="holder"))
         await session.commit()
