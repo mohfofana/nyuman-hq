@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useLive } from "../lib/live";
-import { Bell, CalendarDays, FolderOpen, House, LayoutList, MessagesSquare, Search, Timer, Users } from "lucide-react";
+import { Bell, CalendarDays, FolderOpen, Gavel, House, LayoutList, MessagesSquare, MoreHorizontal, Search, Timer, Users, X } from "lucide-react";
 import { StatusMenu } from "./StatusMenu";
 import { Toasts } from "./Toasts";
 
@@ -14,6 +14,10 @@ export const NAV = [
   { to: "/fichiers", label: "Fichiers", icon: FolderOpen },
   { to: "/equipe", label: "Équipe", icon: Users },
 ];
+
+// Sur téléphone, la barre du bas ne garde que 4 onglets : le reste passe dans « Plus ».
+const PHONE_NAV = NAV.slice(0, 4);
+const PHONE_MORE = [...NAV.slice(4), { to: "/conseil", label: "Salle du conseil", icon: Gavel }];
 
 function NavItem({ to, label, icon: Icon, mobile, ...rest }: (typeof NAV)[number] & { mobile?: boolean; short?: string }) {
   const { channels } = useLive();
@@ -63,6 +67,49 @@ function SearchBox() {
   );
 }
 
+/** Barre du bas du téléphone : 4 onglets + « Plus », qui ouvre le reste en feuille. */
+function PhoneNav() {
+  const [open, setOpen] = useState(false);
+  const { pathname } = useLocation();
+  useEffect(() => { setOpen(false); }, [pathname]);
+  const inMore = PHONE_MORE.some((n) => pathname.startsWith(n.to));
+  return (
+    <>
+      {open && (
+        <div className="fixed inset-0 z-30 bg-black/30 sm:hidden" onClick={() => setOpen(false)}>
+          <div onClick={(e) => e.stopPropagation()}
+            className="slide-in absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-xl">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-base font-semibold">Plus</h2>
+              <button onClick={() => setOpen(false)} aria-label="Fermer" className="rounded-lg p-1 text-ink-soft hover:bg-surface"><X size={18} /></button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {PHONE_MORE.map(({ to, label, icon: Icon }) => (
+                <NavLink key={to} to={to} className={({ isActive }) =>
+                  `flex items-center gap-3 rounded-2xl border px-3 py-3 text-sm font-medium transition ${
+                    isActive ? "border-accent bg-accent-soft text-accent" : "border-line hover:bg-surface"}`}>
+                  <Icon size={19} /> {label}
+                </NavLink>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-line bg-white/95 px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden">
+        {PHONE_NAV.map((n) => <NavItem key={n.to} {...n} mobile />)}
+        <button onClick={() => setOpen(true)}
+          className={`group relative flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-medium transition ${inMore ? "text-accent" : "text-ink-soft"}`}>
+          {inMore && <span className="absolute left-1/2 top-0 h-1 w-8 -translate-x-1/2 rounded-b-full bg-accent" />}
+          <span className={`flex h-9 w-11 items-center justify-center rounded-xl transition ${inMore ? "bg-accent text-white shadow-sm shadow-accent/30" : "group-hover:bg-surface-2"}`}>
+            <MoreHorizontal size={20} strokeWidth={inMore ? 2.2 : 1.8} />
+          </span>
+          Plus
+        </button>
+      </nav>
+    </>
+  );
+}
+
 export function Shell() {
   const { channels } = useLive();
   const mentionCount = channels.reduce((n, c) => n + c.mentions, 0);
@@ -91,9 +138,7 @@ export function Shell() {
         </main>
       </div>
       <Toasts />
-      <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-line bg-white/95 px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden">
-        {NAV.map((n) => <NavItem key={n.to} {...n} mobile />)}
-      </nav>
+      <PhoneNav />
     </div>
   );
 }

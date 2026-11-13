@@ -22,7 +22,7 @@ export function MyPostCard({ space }: { space: Space }) {
   const agents = space.agents.map((id) => members.find((m) => m.id === id)).filter(Boolean) as typeof members;
   const ask = async (id: string) => { const r = await chat.openDm([id]); navigate(`/discussions/${r.id}`); };
   return (
-    <div className="rounded-2xl bg-white p-5 text-ink shadow-[0_16px_32px_-16px_rgba(188,96,13,0.35)]">
+    <div className="rounded-2xl bg-white p-4 text-ink shadow-[0_16px_32px_-16px_rgba(188,96,13,0.35)] sm:p-5">
       <div className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Mon poste</div>
       {space.positions.length ? (
         space.positions.map((p) => <div key={p.id} className="mt-1 text-lg font-semibold leading-snug">{p.title}</div>)

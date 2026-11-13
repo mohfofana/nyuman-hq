@@ -129,17 +129,17 @@ function DayList({ week, list, onOpen }: { week: Date; list: Meeting[]; onOpen: 
           );
         })}
       </div>
-      <h2 className="mt-5 text-sm font-semibold text-ink-soft">{longDate(day)}</h2>
+      <h2 className="mt-4 text-sm font-semibold text-ink-soft">{longDate(day)}</h2>
       <div className="mt-2 space-y-2">
         {items.length === 0 && <p className="rounded-2xl bg-white p-6 text-center text-sm text-ink-muted shadow-sm">Aucune réunion ce jour-là.</p>}
         {items.map((m) => {
           const live = relativeStart(m.start_at, m.end_at).live;
           return (
-            <div key={m.id} onClick={() => onOpen(m)} className={`flex cursor-pointer gap-3 rounded-2xl border bg-white p-4 shadow-sm ${live ? "border-online" : "border-line"}`}>
-              <div className="w-12 shrink-0 text-sm"><div className="font-semibold">{hm(m.start_at)}</div><div className="text-xs text-ink-muted">{hm(m.end_at)}</div></div>
+            <div key={m.id} onClick={() => onOpen(m)} className={`flex cursor-pointer gap-3 rounded-2xl border bg-white p-3 shadow-sm ${live ? "border-online" : "border-line"}`}>
+              <div className="w-11 shrink-0 text-sm"><div className="font-semibold leading-tight">{hm(m.start_at)}</div><div className="text-xs leading-tight text-ink-muted">{hm(m.end_at)}</div></div>
               <div className={`w-1 shrink-0 rounded-full ${m.cancelled ? "bg-line" : live ? "bg-online" : "bg-accent"}`} />
               <div className="min-w-0 flex-1">
-                <div className={`font-semibold ${m.cancelled ? "text-ink-muted line-through" : ""}`}>{m.title}</div>
+                <div className={`line-clamp-2 text-[15px] font-semibold leading-snug ${m.cancelled ? "text-ink-muted line-through" : ""}`}>{m.title}</div>
                 <div className="mt-1.5 flex -space-x-1.5">
                   {m.attendees.slice(0, 6).map((a) => { const x = members.find((y) => y.id === a.member_id); return x ? <Avatar key={a.member_id} member={x} size="sm" ring /> : null; })}
                 </div>
@@ -173,29 +173,29 @@ export function Agenda() {
   const panel = open ?? (fetched?.id === openId ? fetched : null);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-8 sm:py-8">
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="mr-auto text-3xl font-semibold tracking-tight">Agenda</h1>
-        <div className="flex rounded-full bg-white p-1 shadow-sm ring-1 ring-line">
+    <div className="mx-auto max-w-7xl px-4 py-4 sm:px-8 sm:py-8">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <h1 className="mr-auto text-2xl font-semibold tracking-tight sm:text-3xl">Agenda</h1>
+        <div className="order-3 flex w-full rounded-full bg-white p-1 shadow-sm ring-1 ring-line sm:order-none sm:w-auto">
           {([["all", "Toute l'équipe"], ["mine", "Mes réunions"]] as const).map(([v, l]) => (
-            <button key={v} onClick={() => setScope(v)} className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${scope === v ? "bg-ink text-white" : "text-ink-soft hover:text-ink"}`}>{l}</button>
+            <button key={v} onClick={() => setScope(v)} className={`flex-1 rounded-full px-3.5 py-1.5 text-sm font-medium transition sm:flex-none ${scope === v ? "bg-ink text-white" : "text-ink-soft hover:text-ink"}`}>{l}</button>
           ))}
         </div>
-        <button onClick={() => { setSlot(undefined); setParam("nouvelle", "1"); }}
-          className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-accent/30 hover:bg-accent-hover">
-          <Plus size={17} /> Nouvelle réunion
+        <button onClick={() => { setSlot(undefined); setParam("nouvelle", "1"); }} aria-label="Nouvelle réunion"
+          className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-2 text-sm font-semibold text-white shadow-sm shadow-accent/30 hover:bg-accent-hover sm:px-4 sm:py-2.5">
+          <Plus size={17} /> <span className="hidden sm:inline">Nouvelle réunion</span><span className="sm:hidden">Réunion</span>
         </button>
       </div>
-      <div className="mt-4 flex items-center gap-2">
+      <div className="mt-3 flex items-center gap-2 sm:mt-4">
         <button onClick={() => setWeek(addDays(week, -7))} aria-label="Semaine précédente" className="rounded-full bg-white p-2 shadow-sm ring-1 ring-line hover:bg-surface"><ChevronLeft size={18} /></button>
         <button onClick={() => setWeek(startOfWeek(new Date()))} className="rounded-full bg-white px-3.5 py-2 text-sm font-medium shadow-sm ring-1 ring-line hover:bg-surface">Aujourd'hui</button>
         <button onClick={() => setWeek(addDays(week, 7))} aria-label="Semaine suivante" className="rounded-full bg-white p-2 shadow-sm ring-1 ring-line hover:bg-surface"><ChevronRight size={18} /></button>
-        <span className="ml-2 text-sm font-medium text-ink-soft">{label}</span>
+        <span className="ml-1 min-w-0 flex-1 truncate text-xs font-medium text-ink-soft sm:ml-2 sm:text-sm">{label}</span>
       </div>
       <div className="mt-5 hidden md:block">
         <WeekGrid week={week} list={list} meId={me.id} onOpen={(m) => setParam("r", m.id)} onSlot={(d) => { setSlot(d); setParam("nouvelle", "1"); }} />
       </div>
-      <div className="mt-5 md:hidden"><DayList week={week} list={list} onOpen={(m) => setParam("r", m.id)} /></div>
+      <div className="mt-4 md:hidden"><DayList week={week} list={list} onOpen={(m) => setParam("r", m.id)} /></div>
       {!list.length && (
         <div className="mt-4 hidden items-center gap-3 rounded-2xl bg-blue-soft/60 p-4 text-sm text-blue md:flex">
           <Video size={18} /> Aucune réunion cette semaine. Cliquez sur un créneau de l'agenda pour en planifier une.

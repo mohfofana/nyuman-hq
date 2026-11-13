@@ -68,7 +68,7 @@ function TodayCard() {
   if (!me) return null;
   const save = async () => { await updateMe({ now_doing: value.trim() }); setEditing(false); };
   return (
-    <div className="mt-6 rounded-2xl bg-white/80 p-4 shadow-sm ring-1 ring-white backdrop-blur-sm">
+    <div className="mt-4 rounded-2xl bg-white/80 p-3.5 shadow-sm ring-1 ring-white backdrop-blur-sm sm:mt-6 sm:p-4">
       <div className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Ce que je fais aujourd'hui</div>
       {editing ? (
         <form className="mt-2 flex gap-2" onSubmit={(e) => { e.preventDefault(); save(); }}>
@@ -79,7 +79,7 @@ function TodayCard() {
           </button>
         </form>
       ) : (
-        <button onClick={() => setEditing(true)} className="group mt-1 flex items-center gap-2 text-left text-lg font-medium">
+        <button onClick={() => setEditing(true)} className="group mt-1 flex items-center gap-2 text-left text-base font-medium sm:text-lg">
           {me.now_doing}
           <Pencil size={14} className="text-ink-muted group-hover:text-accent" />
         </button>
@@ -116,14 +116,14 @@ export function Home() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-5 px-4 py-6 sm:px-8 sm:py-8">
-      <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#FFF6EC] via-[#FDEBD8] to-[#FFE3BD] p-6 ring-1 ring-[#F5DCC0] sm:p-8">
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#FFF6EC] via-[#FDEBD8] to-[#FFE3BD] p-4 ring-1 ring-[#F5DCC0] sm:rounded-[28px] sm:p-8">
         <span className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/50" />
         <span className="pointer-events-none absolute -bottom-24 right-24 h-56 w-56 rounded-full bg-sun/30" />
-        <div className="relative grid gap-6 lg:grid-cols-[1.4fr_1fr] lg:items-end">
+        <div className="relative grid gap-4 sm:gap-6 lg:grid-cols-[1.4fr_1fr] lg:items-end">
           <div>
-            <div className="text-sm font-medium text-accent">{date.charAt(0).toUpperCase() + date.slice(1)}</div>
-            <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">{greeting()}, {me.name.split(" ")[0]} 👋</h1>
-            <div className="mt-3"><PresencePill p={presenceOf(me, me)} /></div>
+            <div className="text-xs font-medium text-accent sm:text-sm">{date.charAt(0).toUpperCase() + date.slice(1)}</div>
+            <h1 className="mt-0.5 text-2xl font-semibold tracking-tight sm:mt-1 sm:text-4xl">{greeting()},{" "}<span className="whitespace-nowrap">{me.name.split(" ")[0]} 👋</span></h1>
+            <div className="mt-2 sm:mt-3"><PresencePill p={presenceOf(me, me)} /></div>
             <TodayCard />
           </div>
           {space ? <MyPostCard space={space} /> : <div />}

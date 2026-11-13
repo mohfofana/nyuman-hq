@@ -24,33 +24,54 @@ function Card({ m, onOpen }: { m: Member; onOpen: () => void }) {
   const p = presenceOf(m, me);
   const tint = TINTS[tintIndex(m.id)].solid;
   return (
-    <div className="group relative overflow-hidden rounded-3xl border border-line/80 bg-white shadow-[0_1px_2px_rgba(30,26,23,0.04)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_16px_32px_-16px_rgba(30,26,23,0.25)]">
-      <div className="h-16" style={{ background: `linear-gradient(120deg, ${tint}55, ${tint}22)` }} />
-      <button onClick={onOpen} className="block w-full px-5 pb-4 text-left">
-        <div className="-mt-9 flex items-end justify-between">
-          <Avatar member={m} presence={p} size="lg" ring />
-          <PresencePill p={p} label={presenceLabel(m, p)} />
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          <span className="text-[17px] font-semibold">{m.name}</span>
-          {m.is_head && <Badge tone="orange">Head</Badge>}
-          {m.kind === "agent" && <Badge tone="blue">Agent IA</Badge>}
-        </div>
-        <div className="text-sm text-ink-soft">{m.title}</div>
-        <div className="mt-4 flex items-start gap-2 text-sm">
-          <Target size={15} className="mt-0.5 shrink-0 text-accent" />
-          <span className={m.now_doing ? "text-ink" : "text-ink-muted"}>{m.now_doing || "Rien d'indiqué pour l'instant"}</span>
-        </div>
-      </button>
-      <div className="flex border-t border-line">
-        <Link to={`/discussions?avec=${m.id}`} className="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-ink-soft transition hover:bg-surface hover:text-accent">
-          <MessageSquare size={14} /> Message
-        </Link>
-        <button onClick={onOpen} className="flex flex-1 items-center justify-center gap-1.5 border-l border-line py-2.5 text-xs font-medium text-ink-soft transition hover:bg-surface hover:text-accent">
-          Voir la fiche
+    <>
+      {/* Téléphone : une ligne par personne, pour en voir plusieurs d'un coup. */}
+      <div className="flex items-center gap-3 border-b border-line bg-white px-4 py-3 last:border-0 sm:hidden">
+        <button onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+          <Avatar member={m} presence={p} size="md" />
+          <span className="min-w-0 flex-1">
+            <span className="flex flex-wrap items-center gap-1.5">
+              <span className="truncate text-[15px] font-semibold">{m.name}</span>
+              {m.is_head && <Badge tone="orange">Head</Badge>}
+              {m.kind === "agent" && <Badge tone="blue">Agent IA</Badge>}
+            </span>
+            <span className="block truncate text-xs text-ink-soft">{m.title}</span>
+            <span className={`block truncate text-xs ${m.now_doing ? "text-ink-soft" : "text-ink-muted"}`}>{m.now_doing || "Rien d'indiqué"}</span>
+          </span>
         </button>
+        <Link to={`/discussions?avec=${m.id}`} aria-label={`Message à ${m.name}`}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent"><MessageSquare size={16} /></Link>
       </div>
-    </div>
+
+      {/* Ordinateur : la carte complète. */}
+      <div className="group relative hidden overflow-hidden rounded-3xl border border-line/80 bg-white shadow-[0_1px_2px_rgba(30,26,23,0.04)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_16px_32px_-16px_rgba(30,26,23,0.25)] sm:block">
+        <div className="h-16" style={{ background: `linear-gradient(120deg, ${tint}55, ${tint}22)` }} />
+        <button onClick={onOpen} className="block w-full px-5 pb-4 text-left">
+          <div className="-mt-9 flex items-end justify-between">
+            <Avatar member={m} presence={p} size="lg" ring />
+            <PresencePill p={p} label={presenceLabel(m, p)} />
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <span className="text-[17px] font-semibold">{m.name}</span>
+            {m.is_head && <Badge tone="orange">Head</Badge>}
+            {m.kind === "agent" && <Badge tone="blue">Agent IA</Badge>}
+          </div>
+          <div className="text-sm text-ink-soft">{m.title}</div>
+          <div className="mt-4 flex items-start gap-2 text-sm">
+            <Target size={15} className="mt-0.5 shrink-0 text-accent" />
+            <span className={m.now_doing ? "text-ink" : "text-ink-muted"}>{m.now_doing || "Rien d'indiqué pour l'instant"}</span>
+          </div>
+        </button>
+        <div className="flex border-t border-line">
+          <Link to={`/discussions?avec=${m.id}`} className="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-ink-soft transition hover:bg-surface hover:text-accent">
+            <MessageSquare size={14} /> Message
+          </Link>
+          <button onClick={onOpen} className="flex flex-1 items-center justify-center gap-1.5 border-l border-line py-2.5 text-xs font-medium text-ink-soft transition hover:bg-surface hover:text-accent">
+            Voir la fiche
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -182,7 +203,7 @@ export function Team() {
   const available = members.filter((m) => presenceOf(m, me) === "online").length;
   const open = members.find((m) => m.id === openId) ?? null;
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-8">
+    <div className="mx-auto max-w-6xl px-4 py-4 sm:px-8 sm:py-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Équipe</h1>
@@ -210,7 +231,7 @@ export function Team() {
         </div>
       </div>
       {view === "org" ? <div className="mt-6"><OrgChart /></div> : (
-      <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-4 overflow-hidden rounded-2xl border border-line sm:mt-6 sm:grid sm:gap-5 sm:rounded-none sm:border-0 sm:grid-cols-2 xl:grid-cols-3">
         {shown.map((m) => <Card key={m.id} m={m} onOpen={() => setOpenId(m.id)} />)}
       </div>)}
       {open && <Fiche m={open} onClose={() => setOpenId(null)} />}
