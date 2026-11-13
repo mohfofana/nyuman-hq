@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Zap, Briefcase, CalendarClock, CalendarPlus, Check, CheckCircle2, MessageSquare, Pencil, Sparkles, Target, X } from "lucide-react";
+import { Zap, Briefcase, CalendarClock, CalendarPlus, Check, CheckCircle2, Mail, MessageSquare, Pencil, Sparkles, Target, X } from "lucide-react";
 import { useSession } from "../lib/session";
 import { useLive } from "../lib/live";
 import { Avatar, TINTS, tintIndex } from "../components/Avatar";
 import { Badge, PresencePill } from "../components/ui";
 import { presenceLabel, presenceOf } from "../lib/presence";
-import { agentsApi, type AgentRunSummary, type Member } from "../lib/api";
+import { agentsApi, api, type AgentRunSummary, type Member } from "../lib/api";
 import { OrgChart, useOrg } from "./OrgChart";
 import { useTasks } from "./projects/useProjects";
 
@@ -124,6 +124,40 @@ function Editable({ value, empty, onSave, canEdit }: { value: string; empty: str
   );
 }
 
+/** L'adresse qui permettra de se connecter une fois HQ en ligne. Posée par un responsable. */
+function EmailRow({ m }: { m: Member }) {
+  const { me, patchMember } = useSession();
+  const canEdit = !!me && me.kind === "human" && me.is_head;
+  const [value, setValue] = useState(m.email);
+  const [editing, setEditing] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => { setValue(m.email); }, [m.email]);
+  const save = async () => {
+    setError("");
+    try { patchMember(await api.setEmail(m.id, value.trim())); setEditing(false); }
+    catch (e: any) { setError(e.status === 400 ? "Adresse invalide ou déjà utilisée." : "Impossible pour l'instant."); }
+  };
+  if (!editing) {
+    return (
+      <div className="mt-1 flex items-center gap-2 text-sm">
+        <span className={m.email ? "" : "text-ink-muted"}>{m.email || "Pas encore d'adresse"}</span>
+        {canEdit && <button onClick={() => setEditing(true)} className="text-xs font-medium text-accent hover:underline">{m.email ? "Changer" : "Ajouter"}</button>}
+      </div>
+    );
+  }
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); save(); }} className="mt-1 space-y-1.5">
+      <div className="flex gap-2">
+        <input autoFocus type="email" value={value} onChange={(e) => setValue(e.target.value)} placeholder="prenom@nyuman.app"
+          className="min-w-0 flex-1 rounded-xl border border-line px-3 py-2 text-sm outline-none focus:border-accent" />
+        <button className="rounded-xl bg-accent px-3 py-2 text-sm font-semibold text-white hover:bg-accent-hover">OK</button>
+      </div>
+      {error && <p className="text-xs text-busy">{error}</p>}
+      <p className="text-xs text-ink-muted">L'adresse Google avec laquelle {m.name.split(" ")[0]} se connectera. Une adresse Gmail convient.</p>
+    </form>
+  );
+}
+
 function Fiche({ m, onClose }: { m: Member; onClose: () => void }) {
   const { me, updateMe } = useSession();
   const p = presenceOf(m, me);
@@ -138,6 +172,8 @@ function Fiche({ m, onClose }: { m: Member; onClose: () => void }) {
       node: <Editable value={m.now_doing} empty="Rien d'indiqué" canEdit={mine} onSave={(v) => updateMe({ now_doing: v })} /> },
     { icon: CalendarClock, tone: "bg-blue-soft text-blue", label: "Créneaux",
       node: <Editable value={m.schedule} empty={mine ? "Indiquez quand vous travaillez pour Nyuman" : "Pas encore indiqués"} canEdit={mine} onSave={(v) => updateMe({ schedule: v })} /> },
+    ...(m.kind === "human" ? [{ icon: Mail, tone: "bg-accent-soft text-accent", label: "Adresse Google pour se connecter",
+      node: <EmailRow m={m} /> }] : []),
     ...(m.kind === "agent" ? [{ icon: Zap, tone: "bg-sun-soft text-[#9A6B00]", label: "Réveils automatiques", node: <AgentWakeInfo agentId={m.id} /> }] : []),
     { icon: CheckCircle2, tone: "bg-[#E3F6EA] text-[#18794A]", label: "Terminé ces 7 derniers jours",
       node: <RecentDone memberId={m.id} /> },

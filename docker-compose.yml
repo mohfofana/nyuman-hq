@@ -1,0 +1,33 @@
+# Mise en ligne de Nyuman HQ. Les secrets vont dans un fichier .env à côté, jamais ici.
+services:
+  hq:
+    build: .
+    restart: unless-stopped
+    ports: ["8030:8030"]
+    env_file: [.env]
+    environment:
+      HQ_DATABASE_URL: postgresql+asyncpg://hq:${HQ_DB_PASSWORD}@db:5432/hq
+      HQ_DEV_LOGIN: "false"          # en ligne, on entre par Google seulement
+      HQ_COOKIE_SECURE: "true"       # cookie de session réservé au HTTPS
+      HQ_AGENT_WAKE: "false"         # les agents sont réveillés depuis le Mac
+    volumes: ["hq-uploads:/data/uploads"]
+    depends_on:
+      db: { condition: service_healthy }
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hq
+      POSTGRES_PASSWORD: ${HQ_DB_PASSWORD}
+      POSTGRES_DB: hq
+    volumes: ["hq-db:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hq"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  hq-db:
+  hq-uploads:

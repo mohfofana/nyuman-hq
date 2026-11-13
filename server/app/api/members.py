@@ -1,11 +1,11 @@
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import current_member
-from app.api.schemas import MemberOut, MemberUpdate
+from app.api.schemas import EmailIn, MemberOut, MemberUpdate
 from app.db import get_session
 from app.domain.models import Member
 
@@ -18,6 +18,30 @@ AGENT_STATUSES = {None, "working", "waiting", "blocked"}
 async def list_members(session: AsyncSession = Depends(get_session)):
     rows = await session.scalars(select(Member).order_by(Member.kind.desc(), Member.name))
     return rows.all()
+
+
+@router.put("/{member_id}/email", response_model=MemberOut)
+async def set_email(member_id: str, body: EmailIn, me: Member = Depends(current_member),
+                    session: AsyncSession = Depends(get_session)):
+    """L'adresse Google qui permet de se connecter. Posée par un responsable, pour la mise en ligne."""
+    if me.kind != "human" or not me.is_head:
+        raise HTTPException(403, "Seul un responsable règle les adresses")
+    member = await session.get(Member, member_id)
+    if member is None or member.kind != "human":
+        raise HTTPException(404, "Membre inconnu")
+    email = body.email.strip().lower()
+    if email and ("@" not in email or " " in email or len(email) < 5):
+        raise HTTPException(400, "Adresse invalide")
+    if email:
+        taken = (await session.scalars(select(Member).where(
+            func.lower(Member.email) == email, Member.id != member.id))).first()
+        if taken is not None:
+            raise HTTPException(400, f"Déjà utilisée par {taken.name}")
+    member.email = email
+    await session.commit()
+    from app.realtime import hub
+    await hub.broadcast({"type": "member.updated", "member": MemberOut.model_validate(member).model_dump()})
+    return member
 
 
 @router.patch("/me", response_model=MemberOut)

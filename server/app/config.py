@@ -11,11 +11,17 @@ class Settings(BaseSettings):
     # En local, on choisit son profil sans mot de passe. À couper en ligne.
     dev_login: bool = True
     cors_origins: str = "http://localhost:5180"
+    # Dossier du site compilé (web/dist) servi par le serveur en ligne. Vide = site servi à part (local).
+    web_dir: str = ""
     # Dossier des fichiers envoyés (en ligne : stockage S3 plus tard).
     upload_dir: str = "uploads"
     max_upload_mb: int = 25
     # Visio
     jitsi_base: str = "https://meet.jit.si"
+    # Adresse publique de HQ (sert à construire l'adresse de retour de Google). Vide = local.
+    public_url: str = ""
+    # Cookie de session : à mettre à true en ligne (HTTPS).
+    cookie_secure: bool = False
     google_client_id: str = ""
     google_client_secret: str = ""
     google_refresh_token: str = ""

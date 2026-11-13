@@ -18,6 +18,8 @@ class Member(Base):
     name: Mapped[str] = mapped_column(String(80))
     kind: Mapped[str] = mapped_column(String(10))  # "human" | "agent"
     title: Mapped[str] = mapped_column(String(120))  # poste
+    # Adresse Google qui permet de se connecter. Remplie par un responsable, vide tant que non branché.
+    email: Mapped[str] = mapped_column(String(160), default="", server_default="")
     role: Mapped[str] = mapped_column(Text, default="")  # ce dont il s'occupe
     is_head: Mapped[bool] = mapped_column(Boolean, default=False)
     avatar_tone: Mapped[str] = mapped_column(String(20), default="neutral")

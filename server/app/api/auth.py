@@ -1,12 +1,17 @@
 """Connexion.
 
-- Humains : en local on choisit son profil ; en ligne, Google (étape suivante).
+- Humains : en local on choisit son profil ; en ligne, c'est Google (seules les adresses de l'équipe passent).
 - Agents : en-tête `X-HQ-Agent` + clé `Authorization: Bearer …` (créée par un head).
   En local seulement (et jamais à travers un tunnel), l'en-tête suffit, comme pour les humains.
 """
 import hashlib
 import secrets
+from urllib.parse import urlencode
+
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi.responses import RedirectResponse
+from sqlalchemy import func, select
 from itsdangerous import BadSignature, URLSafeSerializer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +26,23 @@ _signer = URLSafeSerializer(settings.session_secret, salt="hq-session")
 
 
 PROXY_HEADERS = ("x-forwarded-for", "cf-connecting-ip", "x-forwarded-host", "forwarded")
+STATE_COOKIE = "hq_oauth"
+GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN = "https://oauth2.googleapis.com/token"
+GOOGLE_USERINFO = "https://www.googleapis.com/oauth2/v3/userinfo"
+
+
+def set_session(response: Response, member_id: str) -> None:
+    response.set_cookie(COOKIE, _signer.dumps(member_id), httponly=True, samesite="lax",
+                        secure=settings.cookie_secure, max_age=60 * 60 * 24 * 30)
+
+
+def redirect_uri() -> str:
+    return settings.public_url.rstrip("/") + "/api/auth/google/callback"
+
+
+def google_ready() -> bool:
+    return bool(settings.google_client_id and settings.google_client_secret and settings.public_url)
 
 
 def hash_token(token: str) -> str:
@@ -73,8 +95,79 @@ async def dev_login(body: DevLoginIn, response: Response, session: AsyncSession 
     member = await session.get(Member, body.member_id)
     if member is None or member.kind != "human":
         raise HTTPException(400, "Choisissez un membre humain")
-    response.set_cookie(COOKIE, _signer.dumps(member.id), httponly=True, samesite="lax")
+    set_session(response, member.id)
     return member
+
+
+# ---------- connexion Google ----------
+@router.get("/google/start")
+async def google_start():
+    """Envoie vers Google. Au retour, HQ reconnaît la personne à son adresse."""
+    if not google_ready():
+        raise HTTPException(503, "La connexion Google n'est pas configurée")
+    state = secrets.token_urlsafe(24)
+    url = GOOGLE_AUTH + "?" + urlencode({
+        "client_id": settings.google_client_id, "redirect_uri": redirect_uri(), "response_type": "code",
+        "scope": "openid email profile", "state": state, "prompt": "select_account"})
+    r = RedirectResponse(url, status_code=302)
+    r.set_cookie(STATE_COOKIE, _signer.dumps(state), httponly=True, samesite="lax",
+                 secure=settings.cookie_secure, max_age=600)
+    return r
+
+
+async def google_email(code: str) -> str:
+    async with httpx.AsyncClient(timeout=10) as c:
+        tok = await c.post(GOOGLE_TOKEN, data={
+            "code": code, "client_id": settings.google_client_id, "client_secret": settings.google_client_secret,
+            "redirect_uri": redirect_uri(), "grant_type": "authorization_code"})
+        tok.raise_for_status()
+        access = tok.json().get("access_token", "")
+        info = await c.get(GOOGLE_USERINFO, headers={"Authorization": f"Bearer {access}"})
+        info.raise_for_status()
+    data = info.json()
+    if not data.get("email") or not data.get("email_verified"):
+        raise HTTPException(403, "Adresse Google non vérifiée")
+    return data["email"]
+
+
+def back(message: str) -> RedirectResponse:
+    """Retour à l'écran de connexion, avec un mot à afficher."""
+    return RedirectResponse("/?" + urlencode({"erreur": message}), status_code=302)
+
+
+@router.get("/google/callback")
+async def google_callback(request: Request, state: str = "", code: str = "", error: str = "",
+                          session: AsyncSession = Depends(get_session)):
+    if not google_ready():
+        raise HTTPException(503, "La connexion Google n'est pas configurée")
+    if error or not code:
+        return back("Connexion annulée.")
+    raw = request.cookies.get(STATE_COOKIE)
+    try:
+        if not raw or _signer.loads(raw) != state:
+            raise BadSignature("state")
+    except BadSignature:
+        return back("Lien de connexion expiré, réessayez.")
+    try:
+        email = await google_email(code)
+    except HTTPException:
+        raise
+    except Exception:
+        return back("Google n'a pas répondu, réessayez.")
+    member = (await session.scalars(select(Member).where(
+        Member.kind == "human", func.lower(Member.email) == email.lower()))).first()
+    if member is None:
+        return back("Cette adresse ne fait pas partie de l'équipe. Demandez à un responsable de l'ajouter.")
+    r = RedirectResponse("/accueil", status_code=302)
+    set_session(r, member.id)
+    r.delete_cookie(STATE_COOKIE)
+    return r
+
+
+@router.get("/google/status")
+async def google_status():
+    """L'écran de connexion sait s'il doit proposer Google ou le choix de profil."""
+    return {"google": google_ready(), "dev_login": settings.dev_login}
 
 
 @router.post("/logout", status_code=204)
