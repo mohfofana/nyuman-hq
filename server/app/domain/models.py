@@ -18,8 +18,6 @@ class Member(Base):
     name: Mapped[str] = mapped_column(String(80))
     kind: Mapped[str] = mapped_column(String(10))  # "human" | "agent"
     title: Mapped[str] = mapped_column(String(120))  # poste
-    # Adresse Google qui permet de se connecter. Remplie par un responsable, vide tant que non branché.
-    email: Mapped[str] = mapped_column(String(160), default="", server_default="")
     role: Mapped[str] = mapped_column(Text, default="")  # ce dont il s'occupe
     is_head: Mapped[bool] = mapped_column(Boolean, default=False)
     avatar_tone: Mapped[str] = mapped_column(String(20), default="neutral")
@@ -38,6 +36,17 @@ def _uuid() -> str:
     import uuid
 
     return uuid.uuid4().hex
+
+
+class MemberEmail(Base):
+    """Une adresse Google qui ouvre HQ. Chacun peut en avoir plusieurs : la pro et la perso."""
+
+    __tablename__ = "member_emails"
+
+    email: Mapped[str] = mapped_column(String(160), primary_key=True)  # toujours en minuscules
+    member_id: Mapped[str] = mapped_column(ForeignKey("members.id", ondelete="CASCADE"), index=True)
+    added_by: Mapped[Optional[str]] = mapped_column(ForeignKey("members.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class Channel(Base):

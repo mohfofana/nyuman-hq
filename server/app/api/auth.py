@@ -6,19 +6,20 @@
 """
 import hashlib
 import secrets
+from typing import Optional
 from urllib.parse import urlencode
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
-from sqlalchemy import func, select
+from sqlalchemy import select
 from itsdangerous import BadSignature, URLSafeSerializer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import DevLoginIn, MemberOut
 from app.config import settings
 from app.db import get_session
-from app.domain.models import AgentToken, Member
+from app.domain.models import AgentToken, Member, MemberEmail
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 COOKIE = "hq_session"
@@ -154,14 +155,32 @@ async def google_callback(request: Request, state: str = "", code: str = "", err
         raise
     except Exception:
         return back("Google n'a pas répondu, réessayez.")
-    member = (await session.scalars(select(Member).where(
-        Member.kind == "human", func.lower(Member.email) == email.lower()))).first()
+    member = await member_for(session, email)
     if member is None:
         return back("Cette adresse ne fait pas partie de l'équipe. Demandez à un responsable de l'ajouter.")
     r = RedirectResponse("/accueil", status_code=302)
     set_session(r, member.id)
     r.delete_cookie(STATE_COOKIE)
     return r
+
+
+async def member_for(session: AsyncSession, email: str) -> Optional[Member]:
+    """Qui se cache derrière cette adresse ? N'importe laquelle de ses adresses fait l'affaire."""
+    email = email.strip().lower()
+    row = await session.get(MemberEmail, email)
+    if row is not None:
+        member = await session.get(Member, row.member_id)
+        if member is not None and member.kind == "human":
+            return member
+    # Première connexion : une adresse de secours posée par Kevin, le temps de remplir les fiches.
+    for pair in settings.bootstrap_emails.split(","):
+        if "=" in pair:
+            addr, mid = (x.strip().lower() for x in pair.split("=", 1))
+            if addr == email:
+                member = await session.get(Member, mid)
+                if member is not None and member.kind == "human":
+                    return member
+    return None
 
 
 @router.get("/google/status")

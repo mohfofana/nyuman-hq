@@ -12,9 +12,13 @@ Préparé par Kwame le 13/11/2026. Tout est prêt côté code : il reste à choi
 | Agents | réveillés sur le Mac | **toujours sur le Mac** (voir plus bas) |
 
 ## 1. Avant tout : remplir les adresses de l'équipe
-Dans HQ, **Équipe → fiche de chacun → « Adresse Google pour se connecter »** (réservé aux responsables).
-Sans adresse, la personne ne pourra pas entrer. Une adresse Gmail convient ; on passera à @nyuman.app plus tard.
+Dans HQ, **Équipe → fiche de chacun → « Adresses pour se connecter »** (réservé aux responsables).
+Chacun peut en avoir **plusieurs** : son adresse @nyuman.app et sa perso (Gmail). N'importe laquelle ouvre HQ,
+et toutes mènent à la même fiche. Sans aucune adresse, la personne ne pourra pas entrer.
 **À faire pendant que HQ tourne encore en local**, sinon plus personne ne peut se connecter.
+
+Filet de sécurité si on oublie : la variable `HQ_BOOTSTRAP_EMAILS` (par exemple
+`mon.adresse@gmail.com=mohamed`) laisse entrer cette adresse-là le temps de remplir les fiches. À retirer ensuite.
 
 ## 2. Où l'héberger
 **Railway** (projet créé le 14/11, GitHub de Mohamed connecté). Le VPS reste possible plus tard ;
@@ -30,7 +34,7 @@ le `docker-compose.yml` à la racine sert dans ce cas.
 3. **Relier la base à HQ** : sur le service HQ, « Variables → Add Reference → Postgres DATABASE_URL ».
 4. **Variables à poser sur le service HQ** (voir `server/.env.example`) :
    `HQ_PUBLIC_URL`, `HQ_SESSION_SECRET`, `HQ_GOOGLE_CLIENT_ID`, `HQ_GOOGLE_CLIENT_SECRET`,
-   `HQ_DEV_LOGIN=false`, `HQ_COOKIE_SECURE=true`, `HQ_AGENT_WAKE=false`.
+   `HQ_DEV_LOGIN=false`, `HQ_COOKIE_SECURE=true`, `HQ_AGENT_WAKE=false`, et au besoin `HQ_BOOTSTRAP_EMAILS`.
 5. **Un disque pour les fichiers envoyés** : « Settings → Volumes », monté sur `/data/uploads`.
    Sans lui, les images et pièces jointes disparaissent à chaque mise à jour.
 6. **L'adresse** : « Settings → Networking → Custom domain » → `hq.nyuman.app`, puis le CNAME chez Cloudflare.

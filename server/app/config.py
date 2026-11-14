@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     public_url: str = ""
     # Cookie de session : à mettre à true en ligne (HTTPS).
     cookie_secure: bool = False
+    # Secours pour la toute première connexion en ligne : "adresse=identifiant,autre=identifiant".
+    # À poser par Kevin, puis à retirer une fois les adresses remplies dans HQ.
+    bootstrap_emails: str = ""
     google_client_id: str = ""
     google_client_secret: str = ""
     google_refresh_token: str = ""

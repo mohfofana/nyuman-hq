@@ -19,7 +19,7 @@ class MemberOut(BaseModel):
     schedule: str
     manual_status: Optional[str]
     status_message: str
-    email: str = ""
+    emails: list[str] = []
     work_days: str = "1,2,3,4,5"
     ask_hour: Optional[int] = 19
 

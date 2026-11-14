@@ -10,7 +10,7 @@ export type Member = {
   schedule: string;
   manual_status: "busy" | "dnd" | "working" | "waiting" | "blocked" | null;
   status_message: string;
-  email: string;
+  emails: string[];
   work_days: string;
   ask_hour: number | null;
 };
@@ -34,8 +34,10 @@ export const api = {
   updateMe: (data: Partial<Member>) =>
     req<Member>("/api/members/me", { method: "PATCH", body: JSON.stringify(data) }),
   loginStatus: () => req<{ google: boolean; dev_login: boolean }>("/api/auth/google/status"),
-  setEmail: (id: string, email: string) =>
-    req<Member>(`/api/members/${id}/email`, { method: "PUT", body: JSON.stringify({ email }) }),
+  addEmail: (id: string, email: string) =>
+    req<Member>(`/api/members/${id}/emails`, { method: "POST", body: JSON.stringify({ email }) }),
+  removeEmail: (id: string, email: string) =>
+    req<Member>(`/api/members/${id}/emails/${encodeURIComponent(email)}`, { method: "DELETE" }),
 };
 
 export type Channel = {

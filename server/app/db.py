@@ -31,6 +31,14 @@ LATER_COLUMNS = [
     "ALTER TABLE members ADD COLUMN IF NOT EXISTS work_days VARCHAR(20) NOT NULL DEFAULT '1,2,3,4,5'",
     "ALTER TABLE members ADD COLUMN IF NOT EXISTS ask_hour INTEGER DEFAULT 19",
     "ALTER TABLE projects ADD COLUMN IF NOT EXISTS hours_budget INTEGER",
-    "ALTER TABLE members ADD COLUMN IF NOT EXISTS email VARCHAR(160) NOT NULL DEFAULT ''",
-    "CREATE UNIQUE INDEX IF NOT EXISTS members_email_uq ON members (lower(email)) WHERE email <> ''",
+    # L'adresse unique d'hier devient une liste (chacun peut avoir sa pro et sa perso).
+    """DO $$ BEGIN
+         IF EXISTS (SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'members' AND column_name = 'email') THEN
+           INSERT INTO member_emails (email, member_id)
+             SELECT lower(email), id FROM members WHERE email <> ''
+             ON CONFLICT DO NOTHING;
+           ALTER TABLE members DROP COLUMN email;
+         END IF;
+       END $$;""",
 ]
