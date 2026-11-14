@@ -17,6 +17,10 @@ Chacun peut en avoir **plusieurs** : son adresse @nyuman.app et sa perso (Gmail)
 et toutes mènent à la même fiche. Sans aucune adresse, la personne ne pourra pas entrer.
 **À faire pendant que HQ tourne encore en local**, sinon plus personne ne peut se connecter.
 
+Quand on ne connaît pas l'adresse de quelqu'un : sur sa fiche, **« Envoyer un lien d'invitation »**.
+On lui envoie le lien (WhatsApp) ; il se connecte avec Google et son adresse se range toute seule.
+Valable 7 jours, une seule fois, et seul un responsable peut en créer.
+
 Filet de sécurité si on oublie : la variable `HQ_BOOTSTRAP_EMAILS` (par exemple
 `mon.adresse@gmail.com=mohamed`) laisse entrer cette adresse-là le temps de remplir les fiches. À retirer ensuite.
 

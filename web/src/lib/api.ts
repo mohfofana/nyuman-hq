@@ -36,6 +36,7 @@ export const api = {
   loginStatus: () => req<{ google: boolean; dev_login: boolean }>("/api/auth/google/status"),
   addEmail: (id: string, email: string) =>
     req<Member>(`/api/members/${id}/emails`, { method: "POST", body: JSON.stringify({ email }) }),
+  invite: (id: string) => req<{ url: string; member_id: string; days: number }>(`/api/auth/invites/${id}`, { method: "POST" }),
   removeEmail: (id: string, email: string) =>
     req<Member>(`/api/members/${id}/emails/${encodeURIComponent(email)}`, { method: "DELETE" }),
 };

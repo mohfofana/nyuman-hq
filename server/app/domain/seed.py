@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain.models import Channel, Member, Position, PositionHolder
 
 TEAM = [
-    dict(id="mohamed", name="Mohamed", kind="human", title="Gérant et directeur général", is_head=True,
+    dict(id="mohamed", name="Mohamed Fofana", kind="human", title="Gérant et directeur général", is_head=True,
          role="Fixer le cap, trouver l'argent, trancher, signer."),
     dict(id="marie-sophie", name="Marie-Sophie Aka", kind="human", title="Coordinatrice générale", is_head=True,
          role="Faire avancer les projets de toute l'entreprise, à l'heure et au budget."),
@@ -17,6 +17,12 @@ TEAM = [
          role="Tenir l'argent juste et visible : trésorerie, marge, comptabilité."),
     dict(id="kevin", name="Kevin Diakité", kind="human", title="Responsable Produit et technique", is_head=True,
          role="Décider ce que l'app fait, et garantir qu'elle marche."),
+    # Ajoutés le 14/11 (équipe de 12 donnée par Mohamed). Poste et adresse à compléter par un responsable.
+    dict(id="yannis", name="Yannis Sika", kind="human", title="Poste à préciser", role=""),
+    dict(id="maxime", name="Maxime Effangono", kind="human", title="Poste à préciser", role=""),
+    dict(id="fatym", name="Fatym Ako", kind="human", title="Poste à préciser", role=""),
+    dict(id="emmanuel-kanon", name="Emmanuel Kanon", kind="human", title="Poste à préciser", role=""),
+    dict(id="emmanuel-konan", name="Emmanuel Konan", kind="human", title="Poste à préciser", role=""),
     dict(id="kodjo", name="Kodjo", kind="agent", title="Produit et tech",
          role="App, serveur, back-office, builds. Seul à toucher au code de l'app."),
     dict(id="adjoua", name="Adjoua", kind="agent", title="Finance",

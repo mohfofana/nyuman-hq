@@ -6,6 +6,7 @@
 """
 import hashlib
 import secrets
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from urllib.parse import urlencode
 
@@ -19,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.schemas import DevLoginIn, MemberOut
 from app.config import settings
 from app.db import get_session
-from app.domain.models import AgentToken, Member, MemberEmail
+from app.domain.models import AgentToken, Invite, Member, MemberEmail
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 COOKIE = "hq_session"
@@ -28,6 +29,8 @@ _signer = URLSafeSerializer(settings.session_secret, salt="hq-session")
 
 PROXY_HEADERS = ("x-forwarded-for", "cf-connecting-ip", "x-forwarded-host", "forwarded")
 STATE_COOKIE = "hq_oauth"
+INVITE_COOKIE = "hq_invite"
+INVITE_DAYS = 7
 GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO = "https://www.googleapis.com/oauth2/v3/userinfo"
@@ -100,6 +103,62 @@ async def dev_login(body: DevLoginIn, response: Response, session: AsyncSession 
     return member
 
 
+# ---------- invitations ----------
+@router.post("/invites/{member_id}")
+async def create_invite(member_id: str, request: Request, me: Member = Depends(current_member),
+                        session: AsyncSession = Depends(get_session)):
+    """Un responsable fabrique un lien à envoyer (WhatsApp). La personne s'y connecte avec Google,
+    et son adresse se range toute seule sur sa fiche. Un seul usage, 7 jours."""
+    if me.kind != "human" or not me.is_head:
+        raise HTTPException(403, "Seul un responsable invite quelqu'un")
+    member = await session.get(Member, member_id)
+    if member is None or member.kind != "human":
+        raise HTTPException(404, "Membre inconnu")
+    token = secrets.token_urlsafe(32)
+    session.add(Invite(token_hash=hash_token(token), member_id=member.id, created_by=me.id,
+                       expires_at=datetime.now(timezone.utc) + timedelta(days=INVITE_DAYS)))
+    await session.commit()
+    base = settings.public_url.rstrip("/") or str(request.base_url).rstrip("/")
+    return {"url": f"{base}/api/auth/invite/{token}", "member_id": member.id, "days": INVITE_DAYS}
+
+
+@router.get("/invite/{token}")
+async def use_invite(token: str, session: AsyncSession = Depends(get_session)):
+    """La personne clique sur son lien : on le met de côté, puis on l'envoie chez Google."""
+    invite = await session.get(Invite, hash_token(token))
+    if invite is None or invite.used_at is not None or invite.expires_at < datetime.now(timezone.utc):
+        return back("Ce lien d'invitation n'est plus valable. Demandez-en un nouveau.")
+    if not google_ready():
+        raise HTTPException(503, "La connexion Google n'est pas configurée")
+    r = await google_start()
+    r.set_cookie(INVITE_COOKIE, _signer.dumps(token), httponly=True, samesite="lax",
+                 secure=settings.cookie_secure, max_age=900)
+    return r
+
+
+async def claim_invite(session: AsyncSession, request: Request, email: str) -> Optional[Member]:
+    """Au retour de Google, si la personne venait d'une invitation, on lui attache cette adresse."""
+    raw = request.cookies.get(INVITE_COOKIE)
+    if not raw:
+        return None
+    try:
+        token = _signer.loads(raw)
+    except BadSignature:
+        return None
+    invite = await session.get(Invite, hash_token(token))
+    if invite is None or invite.used_at is not None or invite.expires_at < datetime.now(timezone.utc):
+        return None
+    email = email.strip().lower()
+    taken = await session.get(MemberEmail, email)
+    if taken is not None and taken.member_id != invite.member_id:
+        return None  # cette adresse est déjà celle de quelqu'un d'autre
+    if taken is None:
+        session.add(MemberEmail(email=email, member_id=invite.member_id, added_by=invite.created_by))
+    invite.used_at = datetime.now(timezone.utc)
+    await session.commit()
+    return await session.get(Member, invite.member_id)
+
+
 # ---------- connexion Google ----------
 @router.get("/google/start")
 async def google_start():
@@ -128,7 +187,8 @@ async def google_email(code: str) -> str:
     data = info.json()
     if not data.get("email") or not data.get("email_verified"):
         raise HTTPException(403, "Adresse Google non vérifiée")
-    return data["email"]
+    # Toujours en minuscules : c'est la forme rangée en base, et Google n'est pas constant là-dessus.
+    return data["email"].strip().lower()
 
 
 def back(message: str) -> RedirectResponse:
@@ -155,12 +215,13 @@ async def google_callback(request: Request, state: str = "", code: str = "", err
         raise
     except Exception:
         return back("Google n'a pas répondu, réessayez.")
-    member = await member_for(session, email)
+    member = await claim_invite(session, request, email) or await member_for(session, email)
     if member is None:
         return back("Cette adresse ne fait pas partie de l'équipe. Demandez à un responsable de l'ajouter.")
     r = RedirectResponse("/accueil", status_code=302)
     set_session(r, member.id)
     r.delete_cookie(STATE_COOKIE)
+    r.delete_cookie(INVITE_COOKIE)
     return r
 
 

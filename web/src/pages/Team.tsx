@@ -159,11 +159,43 @@ function EmailRow({ m }: { m: Member }) {
       )}
       {error && <p className="text-xs text-busy">{error}</p>}
       {canEdit && !adding && (
-        <button onClick={() => setAdding(true)} className="text-xs font-medium text-accent hover:underline">
-          {m.emails.length ? "Ajouter une autre adresse" : "Ajouter une adresse"}
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <button onClick={() => setAdding(true)} className="text-xs font-medium text-accent hover:underline">
+            {m.emails.length ? "Ajouter une autre adresse" : "Ajouter une adresse"}
+          </button>
+          <InviteButton m={m} />
+        </div>
       )}
       {canEdit && <p className="text-xs text-ink-muted">Pro ou perso : chacune ouvre HQ. Une adresse Gmail convient.</p>}
+    </div>
+  );
+}
+
+/** Quand on ne connaît pas son adresse : on lui envoie un lien, il se connecte, l'adresse se range. */
+function InviteButton({ m }: { m: Member }) {
+  const [link, setLink] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const make = async () => {
+    setBusy(true);
+    try { setLink((await api.invite(m.id)).url); } finally { setBusy(false); }
+  };
+  if (!link) {
+    return <button onClick={make} disabled={busy} className="text-xs font-medium text-accent hover:underline disabled:opacity-50">
+      Envoyer un lien d'invitation
+    </button>;
+  }
+  return (
+    <div className="w-full space-y-1.5 rounded-xl bg-surface p-2.5">
+      <p className="text-xs text-ink-soft">À envoyer à {m.name.split(" ")[0]} (WhatsApp). Valable 7 jours, une seule fois.</p>
+      <div className="flex gap-2">
+        <input readOnly value={link} onFocus={(e) => e.currentTarget.select()}
+          className="min-w-0 flex-1 rounded-lg border border-line bg-white px-2 py-1.5 text-xs" />
+        <button onClick={() => { navigator.clipboard?.writeText(link); setCopied(true); }}
+          className="shrink-0 rounded-lg bg-accent px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-accent-hover">
+          {copied ? "Copié" : "Copier"}
+        </button>
+      </div>
     </div>
   );
 }

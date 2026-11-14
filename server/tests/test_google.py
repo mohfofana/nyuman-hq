@@ -82,3 +82,37 @@ async def test_adresse_de_secours_pour_la_premiere_connexion(client, google, mon
     r = await client.get(f"/api/auth/google/callback?state={state}&code=x", follow_redirects=False)
     assert r.headers["location"] == "/accueil"
     assert (await client.get("/api/auth/me")).json()["id"] == "mohamed"
+
+
+async def test_invitation_range_l_adresse_toute_seule(mohamed, google, monkeypatch):
+    """Un responsable envoie un lien ; la personne se connecte avec Google et son adresse se range."""
+    r = await mohamed.post("/api/auth/invites/yannis")
+    assert r.status_code == 200
+    token = r.json()["url"].rsplit("/", 1)[1]
+
+    async def fake(code):
+        return "Yannis.Sika@Gmail.com"
+    monkeypatch.setattr(auth, "google_email", fake)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        start = await c.get(f"/api/auth/invite/{token}", follow_redirects=False)
+        assert start.status_code == 302 and "accounts.google.com" in start.headers["location"]
+        state = start.headers["location"].split("state=")[1].split("&")[0]
+        back = await c.get(f"/api/auth/callback?state={state}&code=x", follow_redirects=False) if False else \
+               await c.get(f"/api/auth/google/callback?state={state}&code=x", follow_redirects=False)
+        assert back.headers["location"] == "/accueil"
+        assert (await c.get("/api/auth/me")).json()["id"] == "yannis"
+
+    # l'adresse est bien sur sa fiche, et le lien ne resert pas
+    membres = {m["id"]: m for m in (await mohamed.get("/api/members")).json()}
+    assert membres["yannis"]["emails"] == ["yannis.sika@gmail.com"]
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        assert "erreur=" in (await c.get(f"/api/auth/invite/{token}", follow_redirects=False)).headers["location"]
+
+
+async def test_seul_un_responsable_invite(kevin, google):
+    from tests.conftest import login_as
+    autre = await login_as("yannis")
+    assert (await autre.post("/api/auth/invites/fatym")).status_code == 403
+    await autre.aclose()
+    assert (await kevin.post("/api/auth/invites/fatym")).status_code == 200

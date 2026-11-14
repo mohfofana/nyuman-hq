@@ -49,6 +49,23 @@ class MemberEmail(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class Invite(Base):
+    """Lien d'invitation : la personne se connecte avec Google, et son adresse se range sur sa fiche.
+
+    Un seul usage, 7 jours. HQ n'en garde que l'empreinte : le lien complet n'existe qu'une fois,
+    au moment où le responsable le copie.
+    """
+
+    __tablename__ = "invites"
+
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    member_id: Mapped[str] = mapped_column(ForeignKey("members.id", ondelete="CASCADE"), index=True)
+    created_by: Mapped[str] = mapped_column(ForeignKey("members.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class Channel(Base):
     """Un canal d'équipe (ouvert à tous) ou une discussion privée (dm)."""
 
