@@ -1,5 +1,18 @@
 """Réglages lus dans l'environnement (.env). Aucun secret n'est écrit ici."""
+import os
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _normalize_db(url: str) -> str:
+    """Accepte l'adresse telle que l'hébergeur la donne (postgres://…) et la rend utilisable ici."""
+    for prefix in ("postgresql+asyncpg://", ):
+        if url.startswith(prefix):
+            return url
+    for prefix in ("postgresql://", "postgres://"):
+        if url.startswith(prefix):
+            return "postgresql+asyncpg://" + url[len(prefix):]
+    return url
 
 
 class Settings(BaseSettings):
@@ -42,3 +55,8 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Railway (et la plupart des hébergeurs) fournissent DATABASE_URL et PORT sans notre préfixe HQ_.
+if not os.getenv("HQ_DATABASE_URL") and os.getenv("DATABASE_URL"):
+    settings.database_url = os.environ["DATABASE_URL"]
+settings.database_url = _normalize_db(settings.database_url)

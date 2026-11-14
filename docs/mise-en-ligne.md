@@ -16,11 +16,27 @@ Dans HQ, **Équipe → fiche de chacun → « Adresse Google pour se connecter �
 Sans adresse, la personne ne pourra pas entrer. Une adresse Gmail convient ; on passera à @nyuman.app plus tard.
 **À faire pendant que HQ tourne encore en local**, sinon plus personne ne peut se connecter.
 
-## 2. Où l'héberger (décision de Mohamed)
-- **Sur le VPS qui héberge déjà `nyuman-api`** : Docker y tourne déjà, Kevin connaît la machine. **Coût supplémentaire : ~0 €.** Recommandé.
-- **Sur Railway**, comme le back-office : plus simple à surveiller, **10 à 15 $ par mois**.
+## 2. Où l'héberger
+**Railway** (projet créé le 14/11, GitHub de Mohamed connecté). Le VPS reste possible plus tard ;
+le `docker-compose.yml` à la racine sert dans ce cas.
 
-## 3. Ce que Kevin fait (environ 1 h)
+### Railway, pas à pas
+1. **Le dépôt GitHub** : Railway déploie depuis GitHub, donc le code doit y être (il n'y est pas encore).
+2. **Deux services** dans le projet :
+   - **Postgres** : « New → Database → PostgreSQL ». Railway crée `DATABASE_URL` tout seul ; HQ la lit
+     sans réglage (y compris la forme `postgres://`).
+   - **HQ** : « New → GitHub Repo », choisir le dépôt. Railway voit le `Dockerfile` et construit tout
+     (le site est compilé dedans). `PORT` est fourni par Railway, HQ s'y adapte.
+3. **Relier la base à HQ** : sur le service HQ, « Variables → Add Reference → Postgres DATABASE_URL ».
+4. **Variables à poser sur le service HQ** (voir `server/.env.example`) :
+   `HQ_PUBLIC_URL`, `HQ_SESSION_SECRET`, `HQ_GOOGLE_CLIENT_ID`, `HQ_GOOGLE_CLIENT_SECRET`,
+   `HQ_DEV_LOGIN=false`, `HQ_COOKIE_SECURE=true`, `HQ_AGENT_WAKE=false`.
+5. **Un disque pour les fichiers envoyés** : « Settings → Volumes », monté sur `/data/uploads`.
+   Sans lui, les images et pièces jointes disparaissent à chaque mise à jour.
+6. **L'adresse** : « Settings → Networking → Custom domain » → `hq.nyuman.app`, puis le CNAME chez Cloudflare.
+7. **Sauvegarde hebdomadaire** de la base (demandée par Koffi au vote).
+
+## 3. Ce que Kevin fait côté Google (environ 30 min)
 1. **Connexion Google** : un projet Google Cloud (gratuit), identifiant OAuth « Application Web ».
    - Origine autorisée : `https://hq.nyuman.app`
    - Adresse de retour : `https://hq.nyuman.app/api/auth/google/callback`
@@ -28,10 +44,8 @@ Sans adresse, la personne ne pourra pas entrer. Une adresse Gmail convient ; on 
    `HQ_PUBLIC_URL`, `HQ_SESSION_SECRET` (longue phrase au hasard), `HQ_GOOGLE_CLIENT_ID`,
    `HQ_GOOGLE_CLIENT_SECRET`, `HQ_DB_PASSWORD`.
    `HQ_DEV_LOGIN=false`, `HQ_COOKIE_SECURE=true` et `HQ_AGENT_WAKE=false` sont déjà posés dans le compose.
-3. **Démarrer** : `docker compose up -d --build` (le serveur crée les tables tout seul).
-4. **L'adresse** : `hq.nyuman.app` vers la machine, en HTTPS.
-5. **Une sauvegarde par semaine** de la base (demandée par Koffi lors du vote) :
-   `docker compose exec -T db pg_dump -U hq hq | gzip > hq-$(date +%F).sql.gz`
+3. Le serveur crée ses tables tout seul au démarrage.
+5. **Une sauvegarde par semaine** de la base (demandée par Koffi lors du vote).
 
 ## 4. Le dépôt
 `~/Documents/nyuman-hq` n'a pas encore de dépôt GitHub. Dites à Kwame où le mettre

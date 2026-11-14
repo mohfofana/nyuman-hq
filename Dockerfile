@@ -20,4 +20,5 @@ COPY --from=site /web/dist ./web_dist
 ENV HQ_WEB_DIR=/app/web_dist HQ_UPLOAD_DIR=/data/uploads
 RUN mkdir -p /data/uploads
 EXPOSE 8030
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8030", "--proxy-headers", "--forwarded-allow-ips", "*"]
+# PORT est imposé par certains hébergeurs (Railway) ; sinon 8030.
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8030} --proxy-headers --forwarded-allow-ips '*'"]
