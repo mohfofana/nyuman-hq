@@ -1,7 +1,9 @@
-# Mettre Nyuman HQ en ligne
+# Nyuman HQ en ligne
 
-Préparé par Kwame le 13/11/2026. Tout est prêt côté code : il reste à choisir où l'héberger,
-à créer la connexion Google et à poser les secrets. Kwame ne lit ni ne pose aucun secret.
+**HQ est en ligne depuis le 14/11/2026** : https://hq-production-bce0327f.up.railway.app
+Projet Railway `nyuman-hq`, espace **Nyuman** (à côté de `nyuman-backoffice`) : un service `hq`
+(construit depuis le Dockerfile du dépôt `mohfofana/nyuman-hq`), une base PostgreSQL, et un disque
+`fichiers-hq` monté sur `/data/uploads` pour les pièces jointes.
 
 ## Ce qui change entre le local et la ligne
 | | Local (aujourd'hui) | En ligne |
@@ -32,8 +34,28 @@ Filet de sécurité si on oublie : la variable `HQ_BOOTSTRAP_EMAILS` (par exempl
 **Railway** (projet créé le 14/11, GitHub de Mohamed connecté). Le VPS reste possible plus tard ;
 le `docker-compose.yml` à la racine sert dans ce cas.
 
-### Railway, pas à pas
-1. **Le dépôt GitHub** : Railway déploie depuis GitHub, donc le code doit y être (il n'y est pas encore).
+### Ce qui reste à faire (Kevin)
+1. **La connexion Google** — sans elle, personne ne peut entrer. Dans un projet Google Cloud, un
+   identifiant OAuth « Application Web » :
+   - Origine autorisée : `https://hq-production-bce0327f.up.railway.app`
+   - Adresse de retour : `https://hq-production-bce0327f.up.railway.app/api/auth/google/callback`
+   Puis, sur le service `hq` dans Railway, poser `HQ_GOOGLE_CLIENT_ID` et `HQ_GOOGLE_CLIENT_SECRET`.
+   (À refaire avec la vraie adresse le jour où `hq.nyuman.app` est branché.)
+2. **L'accès de Railway au dépôt** : le dépôt est privé et Railway n'arrive pas encore à le lire, donc
+   les mises à jour ne partent pas toutes seules. Installer l'app GitHub de Railway sur
+   `mohfofana/nyuman-hq`. En attendant, on déploie à la main : `railway up --service hq`.
+3. **L'adresse `hq.nyuman.app`** : Railway → service `hq` → Settings → Networking → Custom domain,
+   puis le CNAME chez Cloudflare. Ensuite, mettre `HQ_PUBLIC_URL` à la nouvelle adresse.
+4. **Une sauvegarde par semaine** de la base (demandée par Koffi au vote).
+
+### Ce qui est déjà réglé
+- `HQ_DEV_LOGIN=false` : la connexion sans mot de passe est coupée (vérifié : elle répond 404).
+- `HQ_COOKIE_SECURE=true`, `HQ_AGENT_WAKE=false`, `HQ_UPLOAD_DIR=/data/uploads`, `DATABASE_URL` reliée.
+- La clé qui signe les sessions est fabriquée par HQ lui-même au premier démarrage : aucun humain ne la manipule.
+- La liste de l'équipe n'est pas lisible sans être connecté.
+
+### Si un jour on repasse sur le VPS
+1. **Le dépôt GitHub** : Railway déploie depuis GitHub, donc le code doit y être.
 2. **Deux services** dans le projet :
    - **Postgres** : « New → Database → PostgreSQL ». Railway crée `DATABASE_URL` tout seul ; HQ la lit
      sans réglage (y compris la forme `postgres://`).
