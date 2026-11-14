@@ -41,6 +41,22 @@ export const api = {
     req<Member>(`/api/members/${id}/emails/${encodeURIComponent(email)}`, { method: "DELETE" }),
 };
 
+export type JoinMe = {
+  email: string; name_seen: string; waiting: string | null;
+  candidates: { id: string; name: string; title: string }[];
+};
+export type JoinRequest = {
+  email: string; member_id: string; member_name: string; name_seen: string; created_at: string;
+};
+export const joinApi = {
+  me: () => req<JoinMe>("/api/auth/join/me"),
+  join: (member_id: string) => req<JoinMe>("/api/auth/join", { method: "POST", body: JSON.stringify({ member_id }) })
+    .then(() => req<JoinMe>("/api/auth/join/me")),
+  requests: () => req<JoinRequest[]>("/api/members/join-requests"),
+  decide: (email: string, ok: boolean) =>
+    req<Member>(`/api/members/join-requests/${encodeURIComponent(email)}/${ok ? "oui" : "non"}`, { method: "POST" }),
+};
+
 export type Channel = {
   id: string;
   kind: "channel" | "dm";

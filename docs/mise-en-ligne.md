@@ -17,6 +17,10 @@ Chacun peut en avoir **plusieurs** : son adresse @nyuman.app et sa perso (Gmail)
 et toutes mènent à la même fiche. Sans aucune adresse, la personne ne pourra pas entrer.
 **À faire pendant que HQ tourne encore en local**, sinon plus personne ne peut se connecter.
 
+Quand quelqu'un arrive sur HQ avec une adresse inconnue, il **se présente lui-même** : HQ lui montre les
+fiches sans adresse, il choisit la sienne, et un responsable confirme d'un clic depuis son espace
+(« Quelqu'un veut rejoindre HQ »). Personne n'entre sans cette confirmation.
+
 Quand on ne connaît pas l'adresse de quelqu'un : sur sa fiche, **« Envoyer un lien d'invitation »**.
 On lui envoie le lien (WhatsApp) ; il se connecte avec Google et son adresse se range toute seule.
 Valable 7 jours, une seule fois, et seul un responsable peut en créer.

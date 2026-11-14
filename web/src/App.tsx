@@ -3,6 +3,7 @@ import { FolderOpen } from "lucide-react";
 import { useSession } from "./lib/session";
 import { Shell } from "./components/Shell";
 import { Login } from "./pages/Login";
+import { Join } from "./pages/Join";
 import { Home } from "./pages/Home";
 import { Team } from "./pages/Team";
 import { Preview } from "./pages/Preview";
@@ -18,7 +19,10 @@ import { TrackPage } from "./pages/TrackPage";
 export default function App() {
   const { me, loading } = useSession();
   if (loading) return null;
-  if (!me) return <Login />;
+  if (!me) {
+    // Arrivé par Google avec une adresse inconnue : il se présente avant d'entrer.
+    return window.location.pathname === "/rejoindre" ? <Join /> : <Login />;
+  }
   return (
     <Routes>
       <Route element={<Shell />}>

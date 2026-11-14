@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AlertTriangle, ArrowRight, Bot, Gavel, MessageCircle, PartyPopper, Plus, Sparkles, Store } from "lucide-react";
-import { appStatsApi, fmtMinutes, type AppStats, type AppStatsResponse, type MiniTask, type Role, type Space } from "../../lib/api";
+import { appStatsApi, fmtMinutes, joinApi, type JoinRequest, type AppStats, type AppStatsResponse, type MiniTask, type Role, type Space } from "../../lib/api";
 import { useSession } from "../../lib/session";
+import { useLive } from "../../lib/live";
 import { Avatar } from "../../components/Avatar";
 import { Panel, SoonTag } from "../../components/ui";
 import { TrackList, type RowAsk } from "../../components/TrackList";
@@ -144,6 +145,38 @@ function TaskLine({ t, relance }: { t: MiniTask; relance?: boolean }) {
         </button>
       )}
     </li>
+  );
+}
+
+/** Quelqu'un s'est présenté : un responsable confirme que c'est bien lui. */
+function JoinBlock() {
+  const { subscribe } = useLive();
+  const [list, setList] = useState<JoinRequest[] | null>(null);
+  const load = () => joinApi.requests().then(setList).catch(() => setList([]));
+  useEffect(() => { load(); }, []);
+  useEffect(() => subscribe((ev: any) => { if (String(ev.type).startsWith("join.")) load(); }), [subscribe]);
+  if (!list || list.length === 0) return null;
+  const decide = async (email: string, ok: boolean) => { await joinApi.decide(email, ok); load(); };
+  return (
+    <Panel title={`Quelqu'un veut rejoindre HQ (${list.length})`}>
+      <ul className="space-y-2">
+        {list.map((r) => (
+          <li key={r.email} className="rounded-2xl border border-line p-3">
+            <p className="text-sm">
+              <b>{r.name_seen || r.email}</b> dit être <b>{r.member_name}</b>.
+            </p>
+            <p className="mt-0.5 truncate text-xs text-ink-soft">{r.email}</p>
+            <div className="mt-2.5 flex gap-2">
+              <button onClick={() => decide(r.email, true)}
+                className="rounded-xl bg-accent px-3.5 py-1.5 text-sm font-semibold text-white hover:bg-accent-hover">C'est bien lui</button>
+              <button onClick={() => decide(r.email, false)}
+                className="rounded-xl border border-line px-3.5 py-1.5 text-sm font-medium text-ink-soft hover:bg-surface">Refuser</button>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-xs text-ink-muted">Google a déjà vérifié l'adresse. Vous confirmez seulement que c'est la bonne personne.</p>
+    </Panel>
   );
 }
 
@@ -439,6 +472,7 @@ export function RoleBlocks({ space }: { space: Space }) {
   const r = new Set(space.roles);
   const left: ReactNode[] = [];
   const right: ReactNode[] = [];
+  if (space.is_head) right.push(<JoinBlock key="join" />);
   if (space.to_vote) right.push(<VoteBlock key="vote" space={space} />);
   if (r.has("growth")) {
     left.push(<LaunchCard key="launch" days={space.launch_days ?? 0} />, <GrowthBlock key="salons" space={space} />);

@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.auth import current_member
 from app.api.schemas import EmailIn, MemberOut, MemberUpdate
 from app.db import get_session
-from app.domain.models import Member, MemberEmail
+from app.domain.models import JoinRequest, Member, MemberEmail
 
 router = APIRouter(prefix="/api/members", tags=["members"])
 MANUAL_STATUSES = {None, "busy", "dnd"}
@@ -31,6 +31,39 @@ async def with_emails(session: AsyncSession, members: List[Member]) -> List[dict
 async def list_members(session: AsyncSession = Depends(get_session)):
     rows = list((await session.scalars(select(Member).order_by(Member.kind.desc(), Member.name))).all())
     return await with_emails(session, rows)
+
+
+# ---------- demandes à confirmer (quelqu'un s'est présenté lui-même) ----------
+@router.get("/join-requests")
+async def join_requests(me: Member = Depends(current_member), session: AsyncSession = Depends(get_session)):
+    """Les personnes qui se sont présentées et attendent qu'un responsable confirme."""
+    if me.kind != "human" or not me.is_head:
+        return []
+    rows = (await session.scalars(select(JoinRequest).order_by(JoinRequest.created_at))).all()
+    names = {m.id: m.name for m in (await session.scalars(select(Member))).all()}
+    return [{"email": r.email, "member_id": r.member_id, "member_name": names.get(r.member_id, r.member_id),
+             "name_seen": r.name_seen, "created_at": r.created_at} for r in rows]
+
+
+@router.post("/join-requests/{email}/{decision}", response_model=MemberOut)
+async def decide_join(email: str, decision: str, me: Member = Depends(current_member),
+                      session: AsyncSession = Depends(get_session)):
+    """Oui : l'adresse est rangée sur la fiche et la personne entre. Non : la demande disparaît."""
+    if me.kind != "human" or not me.is_head:
+        raise HTTPException(403, "Seul un responsable confirme")
+    if decision not in ("oui", "non"):
+        raise HTTPException(400, "Décision inconnue")
+    req = await session.get(JoinRequest, email.strip().lower())
+    if req is None:
+        raise HTTPException(404, "Demande introuvable")
+    member = await session.get(Member, req.member_id)
+    if decision == "oui" and await session.get(MemberEmail, req.email) is None:
+        session.add(MemberEmail(email=req.email, member_id=req.member_id, added_by=me.id))
+    await session.delete(req)
+    await session.commit()
+    from app.realtime import hub
+    await hub.broadcast({"type": "join.decided", "email": email, "ok": decision == "oui"})
+    return await broadcast_member(session, member)
 
 
 @router.post("/{member_id}/emails", response_model=MemberOut)

@@ -66,6 +66,21 @@ class Invite(Base):
     used_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class JoinRequest(Base):
+    """Quelqu'un arrive sur HQ avec une adresse inconnue, dit qui il est, et attend qu'un responsable confirme.
+
+    Google a déjà prouvé que l'adresse est bien la sienne ; le responsable confirme seulement que
+    c'est bien la bonne personne.
+    """
+
+    __tablename__ = "join_requests"
+
+    email: Mapped[str] = mapped_column(String(160), primary_key=True)  # minuscules
+    member_id: Mapped[str] = mapped_column(ForeignKey("members.id", ondelete="CASCADE"), index=True)
+    name_seen: Mapped[str] = mapped_column(String(120), default="")  # le nom tel que Google le donne
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class Channel(Base):
     """Un canal d'équipe (ouvert à tous) ou une discussion privée (dm)."""
 

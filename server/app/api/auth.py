@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.schemas import DevLoginIn, MemberOut
 from app.config import settings
 from app.db import get_session
-from app.domain.models import AgentToken, Invite, Member, MemberEmail
+from app.domain.models import AgentToken, Invite, JoinRequest, Member, MemberEmail
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 COOKIE = "hq_session"
@@ -30,6 +30,7 @@ _signer = URLSafeSerializer(settings.session_secret, salt="hq-session")
 PROXY_HEADERS = ("x-forwarded-for", "cf-connecting-ip", "x-forwarded-host", "forwarded")
 STATE_COOKIE = "hq_oauth"
 INVITE_COOKIE = "hq_invite"
+PENDING_COOKIE = "hq_pending"  # adresse vérifiée par Google, en attente de « qui êtes-vous ? »
 INVITE_DAYS = 7
 GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN = "https://oauth2.googleapis.com/token"
@@ -176,6 +177,11 @@ async def google_start():
 
 
 async def google_email(code: str) -> str:
+    return (await google_identity(code))[0]
+
+
+async def google_identity(code: str):
+    """L'adresse (en minuscules) et le nom tel que Google l'affiche."""
     async with httpx.AsyncClient(timeout=10) as c:
         tok = await c.post(GOOGLE_TOKEN, data={
             "code": code, "client_id": settings.google_client_id, "client_secret": settings.google_client_secret,
@@ -188,7 +194,7 @@ async def google_email(code: str) -> str:
     if not data.get("email") or not data.get("email_verified"):
         raise HTTPException(403, "Adresse Google non vérifiée")
     # Toujours en minuscules : c'est la forme rangée en base, et Google n'est pas constant là-dessus.
-    return data["email"].strip().lower()
+    return data["email"].strip().lower(), (data.get("name") or "").strip()[:120]
 
 
 def back(message: str) -> RedirectResponse:
@@ -210,14 +216,19 @@ async def google_callback(request: Request, state: str = "", code: str = "", err
     except BadSignature:
         return back("Lien de connexion expiré, réessayez.")
     try:
-        email = await google_email(code)
+        email, seen_name = await google_identity(code)
     except HTTPException:
         raise
     except Exception:
         return back("Google n'a pas répondu, réessayez.")
     member = await claim_invite(session, request, email) or await member_for(session, email)
     if member is None:
-        return back("Cette adresse ne fait pas partie de l'équipe. Demandez à un responsable de l'ajouter.")
+        # Adresse inconnue : Google a prouvé qu'elle est bien à cette personne, elle va dire qui elle est.
+        r = RedirectResponse("/rejoindre", status_code=302)
+        r.set_cookie(PENDING_COOKIE, _signer.dumps([email, seen_name]), httponly=True, samesite="lax",
+                     secure=settings.cookie_secure, max_age=1800)
+        r.delete_cookie(STATE_COOKIE)
+        return r
     r = RedirectResponse("/accueil", status_code=302)
     set_session(r, member.id)
     r.delete_cookie(STATE_COOKIE)
@@ -242,6 +253,53 @@ async def member_for(session: AsyncSession, email: str) -> Optional[Member]:
                 if member is not None and member.kind == "human":
                     return member
     return None
+
+
+# ---------- se présenter soi-même ----------
+def pending_identity(request: Request):
+    raw = request.cookies.get(PENDING_COOKIE)
+    if not raw:
+        raise HTTPException(401, "Connectez-vous d'abord avec Google")
+    try:
+        email, seen_name = _signer.loads(raw)
+    except BadSignature:
+        raise HTTPException(401, "Session expirée, reconnectez-vous")
+    return email, seen_name
+
+
+@router.get("/join/me")
+async def join_me(request: Request, session: AsyncSession = Depends(get_session)):
+    """Après Google, on montre à la personne les fiches encore libres : elle choisit la sienne."""
+    email, seen_name = pending_identity(request)
+    pending = await session.get(JoinRequest, email)
+    taken = set((await session.scalars(select(MemberEmail.member_id))).all())
+    free = [m for m in (await session.scalars(select(Member).where(
+        Member.kind == "human").order_by(Member.name))).all() if m.id not in taken]
+    return {"email": email, "name_seen": seen_name,
+            "waiting": pending.member_id if pending else None,
+            "candidates": [{"id": m.id, "name": m.name, "title": m.title} for m in free]}
+
+
+@router.post("/join")
+async def join(body: DevLoginIn, request: Request, session: AsyncSession = Depends(get_session)):
+    """La personne dit qui elle est. Un responsable confirmera : personne n'entre tout seul."""
+    email, seen_name = pending_identity(request)
+    if await session.get(MemberEmail, email) is not None:
+        raise HTTPException(400, "Cette adresse est déjà rangée sur une fiche")
+    member = await session.get(Member, body.member_id)
+    if member is None or member.kind != "human":
+        raise HTTPException(404, "Membre inconnu")
+    if (await session.scalars(select(MemberEmail).where(MemberEmail.member_id == member.id))).first() is not None:
+        raise HTTPException(400, "Cette personne a déjà son adresse")
+    existing = await session.get(JoinRequest, email)
+    if existing is not None:
+        existing.member_id = member.id
+    else:
+        session.add(JoinRequest(email=email, member_id=member.id, name_seen=seen_name))
+    await session.commit()
+    from app.realtime import hub
+    await hub.broadcast({"type": "join.requested", "email": email, "member_id": member.id})
+    return {"waiting": member.id, "name": member.name}
 
 
 @router.get("/google/status")
