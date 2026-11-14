@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import smtplib
+import socket
 from email.message import EmailMessage
 
 from app.config import settings
@@ -57,7 +58,8 @@ async def send(to: str, subject: str, text: str, html: str) -> bool:
         print(f"[courrier] accepté pour {to} par {settings.smtp_host} — {reponse}", flush=True)
         return True
     except Exception as e:  # jamais le mot de passe dans le journal
-        detail = str(e)[:200] if not isinstance(e, (TimeoutError, OSError)) else ""
+        # On montre ce que dit le serveur (jamais le mot de passe : il n'apparaît pas dans sa réponse).
+        detail = "" if isinstance(e, (TimeoutError, socket.timeout)) else str(e)[:220]
         print(f"[courrier] échec de l'envoi à {to} : {type(e).__name__} {detail}", flush=True)
         return False
 
