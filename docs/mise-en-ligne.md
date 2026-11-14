@@ -1,6 +1,6 @@
 # Nyuman HQ en ligne
 
-**HQ est en ligne depuis le 14/11/2026** : https://hq-production-bce0327f.up.railway.app
+**HQ est en ligne depuis le 14/11/2026** : **https://teams.nyuman.app**
 Projet Railway `nyuman-hq`, espace **Nyuman** (à côté de `nyuman-backoffice`) : un service `hq`
 (construit depuis le Dockerfile du dépôt `mohfofana/nyuman-hq`), une base PostgreSQL, et un disque
 `fichiers-hq` monté sur `/data/uploads` pour les pièces jointes.
@@ -44,15 +44,14 @@ le `docker-compose.yml` à la racine sert dans ce cas.
    Penser aussi à autoriser Railway dans le SPF de `nyuman.app`, sinon les messages partiront en indésirables.
 1. **La connexion Google** — en plus, pour ceux qui n'ont pas encore leur adresse pro. Dans un projet Google Cloud, un
    identifiant OAuth « Application Web » :
-   - Origine autorisée : `https://hq-production-bce0327f.up.railway.app`
-   - Adresse de retour : `https://hq-production-bce0327f.up.railway.app/api/auth/google/callback`
+   - Origine autorisée : `https://teams.nyuman.app`
+   - Adresse de retour : `https://teams.nyuman.app/api/auth/google/callback`
    Puis, sur le service `hq` dans Railway, poser `HQ_GOOGLE_CLIENT_ID` et `HQ_GOOGLE_CLIENT_SECRET`.
-   (À refaire avec la vraie adresse le jour où `hq.nyuman.app` est branché.)
+
 2. **L'accès de Railway au dépôt** : le dépôt est privé et Railway n'arrive pas encore à le lire, donc
    les mises à jour ne partent pas toutes seules. Installer l'app GitHub de Railway sur
    `mohfofana/nyuman-hq`. En attendant, on déploie à la main : `railway up --service hq`.
-3. **L'adresse `hq.nyuman.app`** : Railway → service `hq` → Settings → Networking → Custom domain,
-   puis le CNAME chez Cloudflare. Ensuite, mettre `HQ_PUBLIC_URL` à la nouvelle adresse.
+3. ~~L'adresse~~ : fait le 14/11 — `teams.nyuman.app` pointe sur le service, `HQ_PUBLIC_URL` suit.
 4. **Une sauvegarde par semaine** de la base (demandée par Koffi au vote).
 
 ### Ce qui est déjà réglé
