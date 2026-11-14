@@ -9,6 +9,17 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db import Base
 
 
+class Setting(Base):
+    """Petits réglages que HQ se donne à lui-même. Sert surtout à la clé qui signe les sessions :
+    elle est fabriquée au hasard au premier démarrage et gardée ici — personne n'a à la manipuler."""
+
+    __tablename__ = "settings"
+
+    key: Mapped[str] = mapped_column(String(40), primary_key=True)
+    value: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class Member(Base):
     """Un membre de l'équipe : humain ou agent, au même niveau."""
 

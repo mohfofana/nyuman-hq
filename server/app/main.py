@@ -16,6 +16,8 @@ from app.domain.seed import seed, seed_channels, seed_org
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     await create_schema()
+    from app.api.auth import ensure_session_secret
+    await ensure_session_secret()
     async with SessionLocal() as session:
         await seed(session)
         await seed_channels(session)

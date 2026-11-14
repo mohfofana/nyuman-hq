@@ -174,3 +174,21 @@ async def test_un_non_responsable_ne_confirme_personne(mohamed, google, monkeypa
     assert (await yannis.get("/api/members/join-requests")).json() == []
     assert (await yannis.post("/api/members/join-requests/maxime.e@gmail.com/oui")).status_code == 403
     await yannis.aclose()
+
+
+async def test_hq_se_fabrique_sa_cle_de_session():
+    """Sans clé posée par personne, HQ s'en crée une au démarrage et la garde."""
+    from sqlalchemy import select as sel
+
+    from app.api.auth import ensure_session_secret
+    from app.db import SessionLocal
+    from app.domain.models import Setting
+
+    await ensure_session_secret()
+    async with SessionLocal() as s:
+        rows = list((await s.scalars(sel(Setting).where(Setting.key == "session_secret"))).all())
+    assert len(rows) == 1 and len(rows[0].value) > 30
+    premiere = rows[0].value
+    await ensure_session_secret()  # au redémarrage, on garde la même
+    async with SessionLocal() as s:
+        assert (await s.get(Setting, "session_secret")).value == premiere

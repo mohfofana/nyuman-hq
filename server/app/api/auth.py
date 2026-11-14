@@ -18,13 +18,35 @@ from itsdangerous import BadSignature, URLSafeSerializer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import DevLoginIn, MemberOut
-from app.config import settings
+from app.config import Settings, settings
 from app.db import get_session
 from app.domain.models import AgentToken, Invite, JoinRequest, Member, MemberEmail
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 COOKIE = "hq_session"
 _signer = URLSafeSerializer(settings.session_secret, salt="hq-session")
+
+
+async def ensure_session_secret() -> None:
+    """En ligne, si personne n'a posé de clé, HQ s'en fabrique une et la garde en base.
+    Les sessions survivent donc aux redémarrages, sans qu'aucun humain ne touche à la clé."""
+    global _signer
+    if settings.session_secret != Settings.model_fields["session_secret"].default:
+        return
+    from app.db import SessionLocal
+    from app.domain.models import Setting
+
+    async with SessionLocal() as s:
+        row = await s.get(Setting, "session_secret")
+        if row is None:
+            row = Setting(key="session_secret", value=secrets.token_urlsafe(48))
+            s.add(row)
+            try:
+                await s.commit()
+            except Exception:  # deux copies démarrent ensemble : la première a gagné
+                await s.rollback()
+                row = await s.get(Setting, "session_secret")
+        _signer = URLSafeSerializer(row.value, salt="hq-session")
 
 
 PROXY_HEADERS = ("x-forwarded-for", "cf-connecting-ip", "x-forwarded-host", "forwarded")
@@ -360,7 +382,7 @@ async def agent_runs_summary(_me: Member = Depends(current_member), session: Asy
 
     from sqlalchemy import func, select
 
-    from app.config import settings
+    from app.config import Settings, settings
     from app.domain.models import AgentRun
 
     now_ = datetime.now(timezone.utc)
