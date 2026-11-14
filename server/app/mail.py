@@ -60,7 +60,8 @@ async def send(to: str, subject: str, text: str, html: str) -> bool:
     except Exception as e:  # jamais le mot de passe dans le journal
         # On montre ce que dit le serveur (jamais le mot de passe : il n'apparaît pas dans sa réponse).
         detail = "" if isinstance(e, (TimeoutError, socket.timeout)) else str(e)[:220]
-        print(f"[courrier] échec de l'envoi à {to} : {type(e).__name__} {detail}", flush=True)
+        print(f"[courrier] échec de l'envoi à {to} via {settings.smtp_user}@{settings.smtp_host}:{settings.smtp_port}"
+              f" (mot de passe de {len(settings.smtp_password)} caractères) : {type(e).__name__} {detail}", flush=True)
         return False
 
 
