@@ -67,3 +67,12 @@ async def test_departements_disent_a_qui_s_adresser(mohamed):
     assert depts["growth"]["head_id"] == "abraham"
     assert depts["growth"]["overdue"] == 1 and depts["growth"]["late_titles"] == ["Confirmer les salons"]
     assert depts["tech"]["head_id"] == "kevin" and depts["finance"]["head_id"] == "carmel"
+
+
+async def test_toutes_les_routes_repondent_meme_avec_le_site(mohamed, monkeypatch, tmp_path):
+    """En ligne, le serveur sert aussi le site : il ne doit jamais avaler les routes de l'API."""
+    for chemin in ("/api/meetings/upcoming", "/api/org", "/api/projects", "/api/tasks",
+                   "/api/members", "/api/channels", "/api/time/me", "/api/space"):
+        r = await mohamed.get(chemin)
+        assert r.status_code == 200, chemin
+        assert "text/html" not in r.headers.get("content-type", ""), f"{chemin} renvoie la page du site"

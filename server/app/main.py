@@ -52,6 +52,17 @@ app.include_router(timesheet.router)
 app.include_router(space.router)
 app.include_router(appstats.router)
 
+app.include_router(files.router)
+app.include_router(live.router)
+app.include_router(meetings.router)
+app.include_router(org.router)
+app.include_router(projects.router)
+
+
+@app.get("/api/health")
+async def health():
+    return {"ok": True}
+
 # En ligne, le même serveur sert le site compilé (web/dist) : une seule adresse, pas de CORS.
 _web = Path(settings.web_dir) if settings.web_dir else None
 if _web and (_web / "index.html").exists():
@@ -64,13 +75,3 @@ if _web and (_web / "index.html").exists():
         if full_path and _web.resolve() in candidate.parents and candidate.is_file():
             return FileResponse(candidate)
         return FileResponse(_web / "index.html")
-app.include_router(files.router)
-app.include_router(live.router)
-app.include_router(meetings.router)
-app.include_router(org.router)
-app.include_router(projects.router)
-
-
-@app.get("/api/health")
-async def health():
-    return {"ok": True}
