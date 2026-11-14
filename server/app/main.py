@@ -26,9 +26,15 @@ async def lifespan(_app: FastAPI):
         from app.domain.models import Member
         from app.realtime import hub
         hub.agents = set((await session.scalars(select(Member.id).where(Member.kind == "agent"))).all())
-    task = asyncio.create_task(meetings.scheduler())
+    tasks = []
+    if settings.meetings_scheduler:
+        tasks.append(asyncio.create_task(meetings.scheduler()))
+    if settings.agent_poll:
+        from app.wake import poll_loop
+        tasks.append(asyncio.create_task(poll_loop()))
     yield
-    task.cancel()
+    for t in tasks:
+        t.cancel()
 
 
 app = FastAPI(title="Nyuman HQ", lifespan=lifespan)

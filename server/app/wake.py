@@ -84,12 +84,27 @@ def system_prompt() -> str:
     return RULES + "\n" + index
 
 
+TOKENS_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".agents.json")
+
+
+def agent_tokens() -> dict:
+    """Clés des agents pour écrire dans un HQ distant. Fichier local, jamais commité ni affiché."""
+    try:
+        with open(TOKENS_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
 async def claude_runner(agent_id: str, model: str, prompt: str) -> dict:
     """Lance Claude en arrière-plan avec le connecteur HQ au nom de l'agent. Renvoie {cost, error}."""
     claude = shutil.which(settings.claude_bin) or settings.claude_bin
     node = shutil.which("node") or "node"
-    mcp = {"mcpServers": {"nyuman-hq": {"command": node, "args": [MCP_SERVER],
-                                       "env": {"HQ_AGENT": agent_id, "HQ_URL": "http://127.0.0.1:8030"}}}}
+    env = {"HQ_AGENT": agent_id, "HQ_URL": settings.hq_url}
+    token = agent_tokens().get(agent_id)
+    if token:  # nécessaire dès que HQ n'est plus en local
+        env["HQ_AGENT_TOKEN"] = token
+    mcp = {"mcpServers": {"nyuman-hq": {"command": node, "args": [MCP_SERVER], "env": env}}}
     # Prompt système court et identique pour tous (mis en cache) : seulement les outils HQ + la lecture de la mémoire.
     args = [claude, "-p", prompt, "--model", model, "--effort", "low", "--output-format", "json",
             "--system-prompt", system_prompt(), "--tools", "Read",
@@ -247,3 +262,39 @@ class Waker:
 
 
 waker = Waker()
+
+
+async def poll_loop() -> None:
+    """Fait répondre les agents à ce qui arrive dans HQ, même quand HQ tourne ailleurs.
+
+    Tourne sur le Mac de Mohamed : le serveur en ligne n'a pas Claude. On regarde la base toutes
+    les quelques secondes, et pour chaque message d'un humain adressé à un agent et resté sans
+    réponse, on réveille l'agent comme s'il venait d'arriver.
+    """
+    from app.domain.models import Mention
+
+    seen: Set[str] = set()
+    start = now()
+    print(f"Agents : surveillance de HQ depuis {start:%H:%M} (toutes les {settings.agent_poll_seconds} s).", flush=True)
+    while True:
+        await asyncio.sleep(settings.agent_poll_seconds)
+        try:
+            async with SessionLocal() as s:
+                recents = (await s.scalars(select(Message).where(
+                    Message.created_at > start, Message.deleted.is_(False)).order_by(Message.created_at))).all()
+                for msg in recents:
+                    if msg.id in seen:
+                        continue
+                    author = await s.get(Member, msg.author_id)
+                    if author is None or author.kind != "human":
+                        seen.add(msg.id)
+                        continue
+                    channel = await s.get(Channel, msg.channel_id)
+                    mentioned = set((await s.scalars(select(Mention.member_id).where(
+                        Mention.message_id == msg.id))).all())
+                    seen.add(msg.id)
+                    woken = await waker.on_message(msg, channel, author, mentioned)
+                    if woken:
+                        print(f"Agents réveillés par {author.name} : {', '.join(woken)}", flush=True)
+        except Exception as e:
+            print(f"Agents : la surveillance a trébuché ({type(e).__name__}), elle continue.", flush=True)

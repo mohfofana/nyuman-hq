@@ -51,11 +51,18 @@ class Settings(BaseSettings):
     # Réveil des agents (Claude lancé en arrière-plan quand on écrit à un agent)
     agent_wake: bool = False
     claude_bin: str = "claude"
+    # Adresse de HQ que les agents utilisent pour écrire (le Mac peut piloter le HQ en ligne).
+    hq_url: str = "http://127.0.0.1:8030"
     agent_daily_cap: int = 30
     agent_run_timeout_s: int = 240
     agent_max_budget_usd: float = 0.25
     # Agents dont la discussion Claude est déjà ouverte : HQ ne lance pas de copie, c'est elle qui répond.
     agent_wake_skip: str = ""
+    # Sur le Mac : surveille la base (même en ligne) et fait répondre les agents. Jamais sur le serveur.
+    agent_poll: bool = False
+    agent_poll_seconds: int = 15
+    # Coupe le planificateur des réunions : utile quand une 2e copie tourne sur la même base.
+    meetings_scheduler: bool = True
     # Délai laissé à une discussion ouverte pour répondre avant que la copie prenne le relais.
     agent_wake_grace_s: int = 180
     agent_workdir: str = ""  # dossier où tourne l'agent (sa mémoire d'équipe est liée à ce dossier)

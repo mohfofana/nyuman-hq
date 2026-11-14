@@ -6,3 +6,5 @@ dist/
 uploads/
 .DS_Store
 mcp/node_modules/
+.agents.json
+.env.enligne
