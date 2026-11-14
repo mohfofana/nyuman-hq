@@ -30,6 +30,17 @@ COOKIE = "hq_session"
 _signer = URLSafeSerializer(settings.session_secret, salt="hq-session")
 
 
+def read_session(raw: Optional[str]) -> Optional[str]:
+    """Lit un cookie de session. À utiliser partout : le signataire change au démarrage,
+    donc personne ne doit en garder une copie de son côté."""
+    if not raw:
+        return None
+    try:
+        return _signer.loads(raw)
+    except BadSignature:
+        return None
+
+
 async def ensure_session_secret() -> None:
     """En ligne, si personne n'a posé de clé, HQ s'en fabrique une et la garde en base.
     Les sessions survivent donc aux redémarrages, sans qu'aucun humain ne touche à la clé."""
@@ -106,13 +117,9 @@ async def current_member(request: Request, session: AsyncSession = Depends(get_s
     agent_id = request.headers.get("x-hq-agent")
     if agent_id:
         return await _agent(request, session, agent_id)
-    raw = request.cookies.get(COOKIE)
-    if not raw:
+    member_id = read_session(request.cookies.get(COOKIE))
+    if not member_id:
         raise HTTPException(401, "Non connecté")
-    try:
-        member_id = _signer.loads(raw)
-    except BadSignature:
-        raise HTTPException(401, "Session invalide")
     member = await session.get(Member, member_id)
     if member is None:
         raise HTTPException(401, "Membre inconnu")

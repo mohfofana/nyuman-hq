@@ -4,11 +4,10 @@ from __future__ import annotations
 import json
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
-from itsdangerous import BadSignature
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.auth import COOKIE, _signer, current_member
+from app.api.auth import COOKIE, current_member, read_session
 from app.api.chat import audience
 from app.db import SessionLocal, get_session
 from app.domain.models import Channel, ChannelMember, Member, PresenceLog
@@ -37,11 +36,7 @@ async def _save_last_seen(member_id: str) -> None:
 
 @router.websocket("/ws")
 async def websocket(ws: WebSocket):
-    raw = ws.cookies.get(COOKIE)
-    try:
-        member_id = _signer.loads(raw) if raw else None
-    except BadSignature:
-        member_id = None
+    member_id = read_session(ws.cookies.get(COOKIE))
     if not member_id:
         await ws.close(code=4401)
         return

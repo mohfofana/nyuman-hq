@@ -242,3 +242,16 @@ async def test_connexion_par_lien_email(mohamed, monkeypatch):
 
     async with SessionLocal() as s:
         assert len((await s.scalars(sel(LoginLink))).all()) >= 2
+
+
+async def test_tout_le_monde_lit_la_session_de_la_meme_facon(mohamed):
+    """Le temps réel lisait le cookie avec une copie périmée de la clé : plus rien n'arrivait en direct.
+    Tout doit passer par read_session, même après que HQ s'est fabriqué sa clé au démarrage."""
+    from app.api import live
+    from app.api.auth import ensure_session_secret, read_session
+
+    await ensure_session_secret()  # comme en ligne
+    cookie = (await mohamed.post("/api/auth/dev-login", json={"member_id": "mohamed"})).cookies["hq_session"]
+    assert read_session(cookie) == "mohamed"
+    assert live.read_session is read_session  # le temps réel n'en garde pas de copie
+    assert (await mohamed.get("/api/auth/me")).json()["id"] == "mohamed"
