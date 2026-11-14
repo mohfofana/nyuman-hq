@@ -17,12 +17,17 @@ TEAM = [
          role="Tenir l'argent juste et visible : trésorerie, marge, comptabilité."),
     dict(id="kevin", name="Kevin Diakité", kind="human", title="Responsable Produit et technique", is_head=True,
          role="Décider ce que l'app fait, et garantir qu'elle marche."),
-    # Ajoutés le 14/11 (équipe de 12 donnée par Mohamed). Poste et adresse à compléter par un responsable.
-    dict(id="yannis", name="Yannis Sika", kind="human", title="Poste à préciser", role=""),
-    dict(id="maxime", name="Maxime Effangono", kind="human", title="Poste à préciser", role=""),
-    dict(id="fatym", name="Fatym Ako", kind="human", title="Poste à préciser", role=""),
-    dict(id="emmanuel-kanon", name="Emmanuel Kanon", kind="human", title="Poste à préciser", role=""),
-    dict(id="emmanuel-konan", name="Emmanuel Konan", kind="human", title="Poste à préciser", role=""),
+    # Ajoutés le 14/11, postes donnés par Mohamed le même jour.
+    dict(id="fatym", name="Fatym Ako", kind="human", title="Chargée marketing et contenus",
+         role="Faire connaître NYUMAN aux clientes et donner envie de réserver."),
+    dict(id="emmanuel-kanon", name="Emmanuel Kanon", kind="human", title="Chargé activation terrain",
+         role="Amener chaque salon signé jusqu'à sa première réservation honorée."),
+    dict(id="emmanuel-konan", name="Emmanuel Konan", kind="human", title="Chargé relation prestataires et support",
+         role="Garder les salons actifs et répondre à tout le monde, vite et juste."),
+    dict(id="maxime", name="Maxime Effangono", kind="human", title="Développeur mobile",
+         role="Des apps iPhone et Android stables sur un téléphone d'entrée de gamme."),
+    dict(id="yannis", name="Yannis Sika", kind="human", title="Développeur serveur et web",
+         role="Un serveur, des paiements et un site qui ne tombent pas."),
     dict(id="kodjo", name="Kodjo", kind="agent", title="Produit et tech",
          role="App, serveur, back-office, builds. Seul à toucher au code de l'app."),
     dict(id="adjoua", name="Adjoua", kind="agent", title="Finance",
@@ -88,9 +93,13 @@ POSITIONS = [
 # Appui des agents (proposition de Kwame) : un agent n'occupe jamais un poste, il appuie la personne qui le tient.
 AGENT_SUPPORT = [(9, "adjoua"), (10, "kodjo"), (1, "koffi"), (2, "mariam"), (10, "kwame")]
 # Placements validés par Mohamed le 13/11 (équipe donnée le même jour).
-# Appuis ajoutés après coup (13/11) : posés une fois s'ils manquent.
-LATER_SUPPORT = [(3, "aminata"), (7, "yao")]
-HOLDERS = [(1, "mohamed"), (2, "marie-sophie"), (3, "abraham"), (7, "sullyvan"), (9, "carmel"), (10, "kevin")]
+# Appuis ajoutés après coup : posés une fois s'ils manquent.
+# Chaque agent appuie tout son département, pas seulement son responsable (14/11).
+LATER_SUPPORT = [(3, "aminata"), (4, "aminata"), (5, "aminata"), (6, "aminata"),
+                 (7, "yao"), (8, "yao"), (11, "kodjo"), (12, "kodjo")]
+HOLDERS = [(1, "mohamed"), (2, "marie-sophie"), (3, "abraham"), (7, "sullyvan"), (9, "carmel"), (10, "kevin"),
+           # Postes donnés par Mohamed le 14/11. Reste à pourvoir : 5 (influence et partenariats).
+           (4, "fatym"), (6, "emmanuel-kanon"), (8, "emmanuel-konan"), (11, "maxime"), (12, "yannis")]
 
 
 async def seed_org(session: AsyncSession) -> None:
