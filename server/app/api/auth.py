@@ -376,6 +376,15 @@ async def join(body: DevLoginIn, request: Request, session: AsyncSession = Depen
     return {"waiting": member.id, "name": member.name}
 
 
+@router.get("/profiles")
+async def profiles(session: AsyncSession = Depends(get_session)):
+    """La liste des noms pour l'écran d'accueil, uniquement quand on entre en cliquant sur son nom."""
+    if not settings.dev_login:
+        raise HTTPException(404)
+    rows = (await session.scalars(select(Member).where(Member.kind == "human").order_by(Member.name))).all()
+    return [{"id": m.id, "name": m.name, "title": m.title} for m in rows]
+
+
 @router.get("/google/status")
 async def google_status():
     """L'écran de connexion sait s'il doit proposer Google ou le choix de profil."""

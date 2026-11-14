@@ -2,15 +2,19 @@ import { useEffect, useState } from "react";
 import { ChevronRight, TriangleAlert } from "lucide-react";
 import { api } from "../lib/api";
 import { useSession } from "../lib/session";
-import { Avatar } from "../components/Avatar";
 
 export function Login() {
-  const { members, login } = useSession();
+  const { login } = useSession();
+  const [humans, setHumans] = useState<{ id: string; name: string; title: string }[]>([]);
   const [mode, setMode] = useState<{ google: boolean; dev_login: boolean; email: boolean } | null>(null);
-  useEffect(() => { api.loginStatus().then(setMode).catch(() => setMode({ google: false, dev_login: true, email: false })); }, []);
+  useEffect(() => {
+    api.loginStatus().then(async (m) => {
+      setMode(m);
+      if (m.dev_login) setHumans(await api.profiles().catch(() => []));
+    }).catch(() => setMode({ google: false, dev_login: true, email: false }));
+  }, []);
   const erreur = new URLSearchParams(window.location.search).get("erreur");
-  const humans = members.filter((m) => m.kind === "human");
-  const agents = members.filter((m) => m.kind === "agent");
+
   return (
     <div className="flex min-h-full flex-col bg-surface lg:flex-row">
       <section className="relative flex flex-col justify-between overflow-hidden bg-gradient-to-br from-[#CF6A12] via-accent-bright to-[#EC9A45] px-8 py-10 text-white lg:w-[46%] lg:px-14 lg:py-14">
@@ -20,31 +24,29 @@ export function Login() {
         <div className="relative mt-10 lg:mt-0">
           <h1 className="text-3xl font-semibold leading-tight lg:text-5xl">Le QG de<br />l'équipe Nyuman.</h1>
           <p className="mt-4 max-w-sm text-white/85">Discussions, réunions, projets et fichiers, avec toute l'équipe, humains et agents.</p>
-          <div className="mt-8 flex -space-x-2">
-            {agents.map((m) => <Avatar key={m.id} member={m} size="sm" ring />)}
-          </div>
-          <p className="mt-2 text-xs text-white/75">{agents.length} agents travaillent déjà ici.</p>
+          <p className="mt-8 text-xs text-white/75">Humains et agents, au même endroit.</p>
         </div>
       </section>
       <section className="flex flex-1 items-center justify-center px-4 py-10">
         <div className="w-full max-w-sm">
           <h2 className="text-2xl font-semibold">Bonjour 👋</h2>
           <p className="mt-1 text-sm text-ink-soft">
-            {mode?.email ? "Entrez votre adresse : on vous envoie un lien, sans mot de passe."
-              : mode?.google ? "Connectez-vous avec votre compte Google." : "Qui êtes-vous ?"}
+            {mode?.dev_login ? "Qui êtes-vous ?"
+              : mode?.email ? "Entrez votre adresse : on vous envoie un lien, sans mot de passe."
+              : mode?.google ? "Connectez-vous avec votre compte Google." : "Chargement…"}
           </p>
           {erreur && (
             <p className="mt-4 flex items-start gap-2 rounded-2xl bg-[#FDE6E2] px-3 py-2.5 text-sm text-[#B5321F]">
               <TriangleAlert size={16} className="mt-0.5 shrink-0" /> {erreur}
             </p>
           )}
-          {mode?.email && <EmailForm />}
-          {mode?.email && mode.google && (
+          {mode?.email && !mode.dev_login && <EmailForm />}
+          {mode?.email && mode.google && !mode.dev_login && (
             <div className="my-4 flex items-center gap-3 text-xs text-ink-muted">
               <span className="h-px flex-1 bg-line" /> ou <span className="h-px flex-1 bg-line" />
             </div>
           )}
-          {mode?.google && (
+          {mode?.google && !mode.dev_login && (
             <a href="/api/auth/google/start"
               className="flex w-full items-center justify-center gap-3 rounded-2xl border border-line bg-white px-4 py-3.5 font-medium shadow-sm transition hover:-translate-y-0.5 hover:border-accent hover:shadow-md">
               <GoogleMark /> Continuer avec Google
@@ -57,10 +59,12 @@ export function Login() {
             </p>
           )}
           <div className={`space-y-2.5 ${mode?.google ? "mt-3" : "mt-6"}`}>
-            {(mode?.dev_login ? humans : []).map((m) => (
+            {humans.map((m) => (
               <button key={m.id} onClick={() => login(m.id)}
                 className="group flex w-full items-center gap-3 rounded-2xl border border-line bg-white px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-accent hover:shadow-md">
-                <Avatar member={m} />
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-semibold text-accent">
+                  {m.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
+                </span>
                 <span className="min-w-0 flex-1">
                   <span className="block font-medium">{m.name}</span>
                   <span className="block truncate text-xs text-ink-soft">{m.title}</span>
@@ -70,9 +74,9 @@ export function Login() {
             ))}
           </div>
           <p className="mt-8 text-xs text-ink-muted">
-            {mode?.email || mode?.google
-              ? "Adresse @nyuman.app ou adresse perso : les deux marchent."
-              : "Version locale. En ligne, on se connectera par e-mail."}
+            {mode?.dev_login
+              ? "Cliquez sur votre nom pour entrer."
+              : "Adresse @nyuman.app ou adresse perso : les deux marchent."}
           </p>
         </div>
       </section>

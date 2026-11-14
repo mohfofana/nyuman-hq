@@ -34,6 +34,7 @@ export const api = {
   updateMe: (data: Partial<Member>) =>
     req<Member>("/api/members/me", { method: "PATCH", body: JSON.stringify(data) }),
   loginStatus: () => req<{ google: boolean; dev_login: boolean; email: boolean }>("/api/auth/google/status"),
+  profiles: () => req<{ id: string; name: string; title: string }[]>("/api/auth/profiles"),
   requestLink: (email: string) =>
     req<{ sent: boolean; minutes: number }>("/api/auth/email/request", { method: "POST", body: JSON.stringify({ email }) }),
   addEmail: (id: string, email: string) =>
