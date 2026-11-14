@@ -21,7 +21,18 @@ def sender() -> str:
     return settings.mail_from or settings.smtp_user
 
 
-def _send_now(to: str, subject: str, text: str, html: str) -> None:
+def _deliver(s: smtplib.SMTP, msg: EmailMessage, to: str) -> str:
+    """Envoie et renvoie la réponse du serveur (souvent un numéro de suivi), pour pouvoir la retrouver."""
+    s.login(settings.smtp_user, settings.smtp_password)
+    s.mail(settings.smtp_user)  # expéditeur réel : la boîte authentifiée
+    code, resp = s.rcpt(to)
+    if code >= 400:
+        raise smtplib.SMTPRecipientsRefused({to: (code, resp)})
+    code, resp = s.data(msg.as_bytes())
+    return f"{code} {resp.decode(errors='replace')[:120]}"
+
+
+def _send_now(to: str, subject: str, text: str, html: str) -> str:
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = sender()
@@ -29,14 +40,11 @@ def _send_now(to: str, subject: str, text: str, html: str) -> None:
     msg.set_content(text)
     msg.add_alternative(html, subtype="html")
     if settings.smtp_port == 465:
-        with smtplib.SMTP_SSL(settings.smtp_host, 465, timeout=20) as s:
-            s.login(settings.smtp_user, settings.smtp_password)
-            s.send_message(msg)
-        return
-    with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=20) as s:
+        with smtplib.SMTP_SSL(settings.smtp_host, 465, timeout=25) as s:
+            return _deliver(s, msg, to)
+    with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=25) as s:
         s.starttls()
-        s.login(settings.smtp_user, settings.smtp_password)
-        s.send_message(msg)
+        return _deliver(s, msg, to)
 
 
 async def send(to: str, subject: str, text: str, html: str) -> bool:
@@ -45,10 +53,12 @@ async def send(to: str, subject: str, text: str, html: str) -> bool:
         print(f"[courrier non configuré] à {to} : {text.splitlines()[0] if text else subject}", flush=True)
         return False
     try:
-        await asyncio.to_thread(_send_now, to, subject, text, html)
+        reponse = await asyncio.to_thread(_send_now, to, subject, text, html)
+        print(f"[courrier] accepté pour {to} par {settings.smtp_host} — {reponse}", flush=True)
         return True
     except Exception as e:  # jamais le mot de passe dans le journal
-        print(f"[courrier] échec de l'envoi à {to} : {type(e).__name__}", flush=True)
+        detail = str(e)[:200] if not isinstance(e, (TimeoutError, OSError)) else ""
+        print(f"[courrier] échec de l'envoi à {to} : {type(e).__name__} {detail}", flush=True)
         return False
 
 
