@@ -113,3 +113,29 @@ async def test_deux_clics_une_seule_discussion_privee(mohamed):
     import asyncio
     rs = await asyncio.gather(*[mohamed.post("/api/dms", json={"member_ids": ["koffi"]}) for _ in range(4)])
     assert len({r.json()["id"] for r in rs}) == 1
+
+
+async def test_arobase_tous_previent_les_humains_pas_les_agents(mohamed):
+    """@tous prévient toute l'équipe d'un coup, sans réveiller les agents."""
+    from sqlalchemy import select
+
+    from app.db import SessionLocal
+    from app.domain.models import Member, Mention
+
+    r = await mohamed.post("/api/channels/general/messages", json={"body": "<@tous> point dans 5 minutes"})
+    assert r.status_code == 201
+    async with SessionLocal() as s:
+        prevenus = set((await s.scalars(select(Mention.member_id).where(
+            Mention.message_id == r.json()["id"]))).all())
+        humains = set((await s.scalars(select(Member.id).where(Member.kind == "human"))).all())
+        agents = set((await s.scalars(select(Member.id).where(Member.kind == "agent"))).all())
+    assert prevenus == humains - {"mohamed"}      # tout le monde sauf celui qui écrit
+    assert not (prevenus & agents)                 # et aucun agent
+
+    # dans une discussion privée, seulement les personnes présentes
+    dm = (await mohamed.post("/api/dms", json={"member_ids": ["kevin"]})).json()["id"]
+    r = await mohamed.post(f"/api/channels/{dm}/messages", json={"body": "<@tous> coucou"})
+    async with SessionLocal() as s:
+        prevenus = set((await s.scalars(select(Mention.member_id).where(
+            Mention.message_id == r.json()["id"]))).all())
+    assert prevenus == {"kevin"}

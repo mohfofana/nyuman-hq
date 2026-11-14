@@ -17,6 +17,8 @@ export function renderBody(body: string, members: Member[], meId?: string): Reac
     if (temps) return <TimeCard key={i} day={temps[1]} />;
     const mention = part.match(/^<@([a-z0-9_-]+)>$/);
     if (mention) {
+      if (mention[1] === "tous")
+        return <span key={i} className="rounded-md bg-accent px-1 py-0.5 font-medium text-white">@tous</span>;
       const m = members.find((x) => x.id === mention[1]);
       const mine = mention[1] === meId;
       return (
@@ -36,11 +38,11 @@ export function encodeMentions(text: string, members: Member[]): string {
   const sorted = [...members].sort((a, b) => b.name.length - a.name.length);
   let out = text;
   for (const m of sorted) out = out.split("@" + m.name).join(`<@${m.id}>`);
-  return out;
+  return out.split("@tous").join("<@tous>");  // prévient toute l'équipe, sans les agents
 }
 
 export function decodeMentions(body: string, members: Member[]): string {
-  return body.replace(/<meeting:[a-f0-9]+>/g, "📅 Réunion").replace(/<temps:[\d-]+>/g, "⏱️ Votre journée, sur quoi ?").replace(/<proposal:[a-f0-9]+>/g, "⚖️ Proposition au vote").replace(/<@([a-z0-9_-]+)>/g, (_, id) => "@" + (members.find((m) => m.id === id)?.name ?? id));
+  return body.replace(/<meeting:[a-f0-9]+>/g, "📅 Réunion").replace(/<temps:[\d-]+>/g, "⏱️ Votre journée, sur quoi ?").replace(/<proposal:[a-f0-9]+>/g, "⚖️ Proposition au vote").replace(/<@([a-z0-9_-]+)>/g, (_, id) => "@" + (id === "tous" ? "tous" : members.find((m) => m.id === id)?.name ?? id));
 }
 
 export function channelTitle(ch: Channel, members: Member[], meId?: string): string {

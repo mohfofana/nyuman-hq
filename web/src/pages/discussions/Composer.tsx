@@ -33,8 +33,11 @@ export function Composer({ channelId, parentId, members, me, placeholder, autoFo
     el.style.height = Math.min(el.scrollHeight, 200) + "px";
   }, [text]);
 
-  const suggestions = query === null ? [] : members
-    .filter((m) => m.id !== me.id && m.name.toLowerCase().includes(query.toLowerCase())).slice(0, 6);
+  const TOUS = { id: "tous", name: "tous", title: "toute l'équipe (sans les agents)" };
+  const suggestions: { id: string; name: string; title: string }[] = query === null ? [] : [
+    ...("tous".startsWith(query.toLowerCase()) ? [TOUS] : []),
+    ...members.filter((m) => m.id !== me.id && m.name.toLowerCase().includes(query.toLowerCase())),
+  ].slice(0, 6);
 
   const onChange = (v: string) => {
     setText(v);
@@ -45,7 +48,7 @@ export function Composer({ channelId, parentId, members, me, placeholder, autoFo
     setSel(0);
   };
 
-  const pick = (m: Member) => {
+  const pick = (m: { id: string; name: string }) => {
     const el = ta.current!;
     const caret = el.selectionStart;
     const before = text.slice(0, caret).replace(/@([\p{L}\p{N}-]*)$/u, `@${m.name} `);
@@ -83,7 +86,9 @@ export function Composer({ channelId, parentId, members, me, placeholder, autoFo
           {suggestions.map((m, i) => (
             <button key={m.id} onMouseDown={(e) => { e.preventDefault(); pick(m); }}
               className={`flex w-full items-center gap-2.5 px-3 py-2 text-left ${i === sel ? "bg-accent-soft" : "hover:bg-surface"}`}>
-              <Avatar member={m} size="sm" />
+              {m.id === "tous"
+                ? <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-[11px] font-bold text-white">@</span>
+                : <Avatar member={members.find((x) => x.id === m.id)!} size="sm" />}
               <span className="text-sm font-medium">{m.name}</span>
               <span className="truncate text-xs text-ink-muted">{m.title}</span>
             </button>

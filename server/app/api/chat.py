@@ -19,6 +19,7 @@ from app.realtime import hub, now
 
 router = APIRouter(prefix="/api", tags=["chat"])
 MENTION_RE = re.compile(r"<@([a-z0-9_-]{1,40})>")
+EVERYONE = "tous"  # @tous : prévient tous les humains du canal, jamais les agents
 MAX_BODY = 8000
 
 
@@ -82,6 +83,14 @@ async def set_read(session: AsyncSession, channel_id: str, member_id: str, at) -
 
 
 # ---------- sérialisation ----------
+async def everyone_here(session: AsyncSession, ch: Channel) -> Set[str]:
+    """Les humains qui voient ce canal. Les agents sont exclus : @tous prévient l'équipe,
+    il ne lance pas six agents (et six factures) d'un coup."""
+    humans = set((await session.scalars(select(Member.id).where(Member.kind == "human"))).all())
+    aud = await audience(session, ch)
+    return humans if aud is None else humans & set(aud)
+
+
 async def serialize(session: AsyncSession, msgs: List[Message]) -> List[dict]:
     if not msgs:
         return []
@@ -248,6 +257,9 @@ async def post_message(channel_id: str, body: MessageIn, me: Member = Depends(cu
         for f in files:
             f.message_id = msg.id
     mentioned = set(MENTION_RE.findall(text))
+    if EVERYONE in mentioned:
+        mentioned.discard(EVERYONE)
+        mentioned |= await everyone_here(session, ch)
     valid: Set[str] = set()
     if mentioned:
         valid = set((await session.scalars(select(Member.id).where(Member.id.in_(mentioned)))).all())
