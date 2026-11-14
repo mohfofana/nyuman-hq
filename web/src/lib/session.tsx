@@ -20,7 +20,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    setMembers(await api.members());
+    // Hors connexion, la liste de l'équipe n'est pas accessible : ce n'est pas une erreur.
+    try { setMembers(await api.members()); } catch { setMembers([]); }
   }, []);
 
   useEffect(() => {

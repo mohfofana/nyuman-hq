@@ -28,7 +28,8 @@ async def with_emails(session: AsyncSession, members: List[Member]) -> List[dict
 
 
 @router.get("", response_model=List[MemberOut])
-async def list_members(session: AsyncSession = Depends(get_session)):
+async def list_members(_me: Member = Depends(current_member), session: AsyncSession = Depends(get_session)):
+    """Réservé aux membres : la liste porte les noms, les postes et les adresses de l'équipe."""
     rows = list((await session.scalars(select(Member).order_by(Member.kind.desc(), Member.name))).all())
     return await with_emails(session, rows)
 

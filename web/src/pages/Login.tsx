@@ -42,8 +42,13 @@ export function Login() {
             </a>
           )}
           {mode?.google && mode.dev_login && <p className="mt-5 text-xs font-medium uppercase tracking-wide text-ink-muted">Ou, en local</p>}
+          {mode && !mode.dev_login && !mode.google && (
+            <p className="mt-6 rounded-2xl bg-surface p-4 text-sm text-ink-soft">
+              La connexion Google n'est pas encore branchée sur ce serveur. Revenez dans un moment.
+            </p>
+          )}
           <div className={`space-y-2.5 ${mode?.google ? "mt-3" : "mt-6"}`}>
-            {humans.map((m) => (
+            {(mode?.dev_login ? humans : []).map((m) => (
               <button key={m.id} onClick={() => login(m.id)}
                 className="group flex w-full items-center gap-3 rounded-2xl border border-line bg-white px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-accent hover:shadow-md">
                 <Avatar member={m} />

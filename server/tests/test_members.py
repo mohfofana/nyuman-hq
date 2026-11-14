@@ -1,7 +1,12 @@
-async def test_liste_humains_et_agents(client):
-    r = await client.get("/api/members")
+async def test_liste_humains_et_agents(mohamed):
+    r = await mohamed.get("/api/members")
     kinds = {m["kind"] for m in r.json()}
     assert r.status_code == 200 and kinds == {"human", "agent"}
+
+
+async def test_la_liste_de_l_equipe_n_est_pas_publique(client):
+    """Elle porte les noms, les postes et les adresses : hors connexion, rien ne sort."""
+    assert (await client.get("/api/members")).status_code == 401
 
 
 async def test_non_connecte(client):
