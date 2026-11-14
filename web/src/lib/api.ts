@@ -33,7 +33,9 @@ export const api = {
   logout: () => req<void>("/api/auth/logout", { method: "POST" }),
   updateMe: (data: Partial<Member>) =>
     req<Member>("/api/members/me", { method: "PATCH", body: JSON.stringify(data) }),
-  loginStatus: () => req<{ google: boolean; dev_login: boolean }>("/api/auth/google/status"),
+  loginStatus: () => req<{ google: boolean; dev_login: boolean; email: boolean }>("/api/auth/google/status"),
+  requestLink: (email: string) =>
+    req<{ sent: boolean; minutes: number }>("/api/auth/email/request", { method: "POST", body: JSON.stringify({ email }) }),
   addEmail: (id: string, email: string) =>
     req<Member>(`/api/members/${id}/emails`, { method: "POST", body: JSON.stringify({ email }) }),
   invite: (id: string) => req<{ url: string; member_id: string; days: number }>(`/api/auth/invites/${id}`, { method: "POST" }),

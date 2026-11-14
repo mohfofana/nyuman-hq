@@ -17,10 +17,13 @@ from sqlalchemy import select
 from itsdangerous import BadSignature, URLSafeSerializer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from pydantic import BaseModel
+
 from app.api.schemas import DevLoginIn, MemberOut
 from app.config import Settings, settings
+from app import mail
 from app.db import get_session
-from app.domain.models import AgentToken, Invite, JoinRequest, Member, MemberEmail
+from app.domain.models import AgentToken, Invite, JoinRequest, LoginLink, Member, MemberEmail
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 COOKIE = "hq_session"
@@ -54,6 +57,7 @@ STATE_COOKIE = "hq_oauth"
 INVITE_COOKIE = "hq_invite"
 PENDING_COOKIE = "hq_pending"  # adresse vérifiée par Google, en attente de « qui êtes-vous ? »
 INVITE_DAYS = 7
+LINK_MINUTES = 20  # durée d'un lien de connexion envoyé par e-mail
 GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO = "https://www.googleapis.com/oauth2/v3/userinfo"
@@ -124,6 +128,54 @@ async def dev_login(body: DevLoginIn, response: Response, session: AsyncSession 
         raise HTTPException(400, "Choisissez un membre humain")
     set_session(response, member.id)
     return member
+
+
+# ---------- connexion par e-mail (lien à usage unique) ----------
+class EmailLoginIn(BaseModel):
+    email: str
+
+
+@router.post("/email/request")
+async def request_link(body: EmailLoginIn, request: Request, session: AsyncSession = Depends(get_session)):
+    """On envoie un lien à l'adresse donnée. On répond toujours pareil : inutile de dire
+    qui fait partie de l'équipe à quelqu'un qui essaie des adresses au hasard."""
+    email = body.email.strip().lower()
+    ok_format = "@" in email and " " not in email and 5 < len(email) < 160 and "." in email.split("@")[-1]
+    if ok_format:
+        # Pas plus d'un lien toutes les 60 secondes pour une même adresse.
+        recent = (await session.scalars(select(LoginLink).where(
+            LoginLink.email == email,
+            LoginLink.created_at > datetime.now(timezone.utc) - timedelta(seconds=60)))).first()
+        if recent is None:
+            token = secrets.token_urlsafe(32)
+            session.add(LoginLink(token_hash=hash_token(token), email=email,
+                                  expires_at=datetime.now(timezone.utc) + timedelta(minutes=LINK_MINUTES)))
+            await session.commit()
+            base = settings.public_url.rstrip("/") or str(request.base_url).rstrip("/")
+            subject, text, html = mail.login_link_message(f"{base}/api/auth/email/{token}", LINK_MINUTES)
+            await mail.send(email, subject, text, html)
+    return {"sent": True, "minutes": LINK_MINUTES}
+
+
+@router.get("/email/{token}")
+async def use_link(token: str, session: AsyncSession = Depends(get_session)):
+    """Le lien reçu par e-mail : il prouve l'adresse, comme Google le ferait."""
+    link = await session.get(LoginLink, hash_token(token))
+    now_ = datetime.now(timezone.utc)
+    if link is None or link.used_at is not None or link.expires_at < now_:
+        return back("Ce lien n'est plus valable. Demandez-en un nouveau.")
+    link.used_at = now_
+    await session.commit()
+    member = await member_for(session, link.email)
+    if member is None:
+        # Adresse inconnue : la personne va dire qui elle est, un responsable confirmera.
+        r = RedirectResponse("/rejoindre", status_code=302)
+        r.set_cookie(PENDING_COOKIE, _signer.dumps([link.email, ""]), httponly=True, samesite="lax",
+                     secure=settings.cookie_secure, max_age=1800)
+        return r
+    r = RedirectResponse("/accueil", status_code=302)
+    set_session(r, member.id)
+    return r
 
 
 # ---------- invitations ----------
@@ -327,7 +379,7 @@ async def join(body: DevLoginIn, request: Request, session: AsyncSession = Depen
 @router.get("/google/status")
 async def google_status():
     """L'écran de connexion sait s'il doit proposer Google ou le choix de profil."""
-    return {"google": google_ready(), "dev_login": settings.dev_login}
+    return {"google": google_ready(), "dev_login": settings.dev_login, "email": mail.configured()}
 
 
 @router.post("/logout", status_code=204)

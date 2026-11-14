@@ -92,6 +92,19 @@ class JoinRequest(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class LoginLink(Base):
+    """Lien de connexion envoyé par e-mail : valable 20 minutes, une seule fois.
+    HQ n'en garde que l'empreinte ; le lien complet n'existe que dans le message reçu."""
+
+    __tablename__ = "login_links"
+
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    email: Mapped[str] = mapped_column(String(160), index=True)  # minuscules
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class Channel(Base):
     """Un canal d'équipe (ouvert à tous) ou une discussion privée (dm)."""
 

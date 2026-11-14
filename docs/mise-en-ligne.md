@@ -35,7 +35,14 @@ Filet de sécurité si on oublie : la variable `HQ_BOOTSTRAP_EMAILS` (par exempl
 le `docker-compose.yml` à la racine sert dans ce cas.
 
 ### Ce qui reste à faire (Kevin)
-1. **La connexion Google** — sans elle, personne ne peut entrer. Dans un projet Google Cloud, un
+0. **La connexion par e-mail** — c'est elle qui fait entrer l'équipe, car le courrier de `nyuman.app`
+   est chez **Netim**, pas chez Google : les adresses @nyuman.app ne sont donc pas des comptes Google.
+   Créer (ou réutiliser) une boîte `hq@nyuman.app` chez Netim, puis poser sur le service `hq` dans Railway :
+   `HQ_SMTP_HOST=smtp.netim.net`, `HQ_SMTP_PORT=587`, `HQ_SMTP_USER=hq@nyuman.app`,
+   `HQ_SMTP_PASSWORD=…` (le mot de passe de la boîte, posé par Kevin seul),
+   `HQ_MAIL_FROM=Nyuman HQ <hq@nyuman.app>`.
+   Penser aussi à autoriser Railway dans le SPF de `nyuman.app`, sinon les messages partiront en indésirables.
+1. **La connexion Google** — en plus, pour ceux qui n'ont pas encore leur adresse pro. Dans un projet Google Cloud, un
    identifiant OAuth « Application Web » :
    - Origine autorisée : `https://hq-production-bce0327f.up.railway.app`
    - Adresse de retour : `https://hq-production-bce0327f.up.railway.app/api/auth/google/callback`

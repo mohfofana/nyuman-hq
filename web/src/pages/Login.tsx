@@ -6,8 +6,8 @@ import { Avatar } from "../components/Avatar";
 
 export function Login() {
   const { members, login } = useSession();
-  const [mode, setMode] = useState<{ google: boolean; dev_login: boolean } | null>(null);
-  useEffect(() => { api.loginStatus().then(setMode).catch(() => setMode({ google: false, dev_login: true })); }, []);
+  const [mode, setMode] = useState<{ google: boolean; dev_login: boolean; email: boolean } | null>(null);
+  useEffect(() => { api.loginStatus().then(setMode).catch(() => setMode({ google: false, dev_login: true, email: false })); }, []);
   const erreur = new URLSearchParams(window.location.search).get("erreur");
   const humans = members.filter((m) => m.kind === "human");
   const agents = members.filter((m) => m.kind === "agent");
@@ -29,20 +29,29 @@ export function Login() {
       <section className="flex flex-1 items-center justify-center px-4 py-10">
         <div className="w-full max-w-sm">
           <h2 className="text-2xl font-semibold">Bonjour 👋</h2>
-          <p className="mt-1 text-sm text-ink-soft">{mode?.google ? "Connectez-vous avec votre compte Google." : "Qui êtes-vous ?"}</p>
+          <p className="mt-1 text-sm text-ink-soft">
+            {mode?.email ? "Entrez votre adresse : on vous envoie un lien, sans mot de passe."
+              : mode?.google ? "Connectez-vous avec votre compte Google." : "Qui êtes-vous ?"}
+          </p>
           {erreur && (
             <p className="mt-4 flex items-start gap-2 rounded-2xl bg-[#FDE6E2] px-3 py-2.5 text-sm text-[#B5321F]">
               <TriangleAlert size={16} className="mt-0.5 shrink-0" /> {erreur}
             </p>
           )}
+          {mode?.email && <EmailForm />}
+          {mode?.email && mode.google && (
+            <div className="my-4 flex items-center gap-3 text-xs text-ink-muted">
+              <span className="h-px flex-1 bg-line" /> ou <span className="h-px flex-1 bg-line" />
+            </div>
+          )}
           {mode?.google && (
             <a href="/api/auth/google/start"
-              className="mt-6 flex w-full items-center justify-center gap-3 rounded-2xl border border-line bg-white px-4 py-3.5 font-medium shadow-sm transition hover:-translate-y-0.5 hover:border-accent hover:shadow-md">
+              className="flex w-full items-center justify-center gap-3 rounded-2xl border border-line bg-white px-4 py-3.5 font-medium shadow-sm transition hover:-translate-y-0.5 hover:border-accent hover:shadow-md">
               <GoogleMark /> Continuer avec Google
             </a>
           )}
           {mode?.google && mode.dev_login && <p className="mt-5 text-xs font-medium uppercase tracking-wide text-ink-muted">Ou, en local</p>}
-          {mode && !mode.dev_login && !mode.google && (
+          {mode && !mode.dev_login && !mode.google && !mode.email && (
             <p className="mt-6 rounded-2xl bg-surface p-4 text-sm text-ink-soft">
               La connexion Google n'est pas encore branchée sur ce serveur. Revenez dans un moment.
             </p>
@@ -61,11 +70,49 @@ export function Login() {
             ))}
           </div>
           <p className="mt-8 text-xs text-ink-muted">
-            {mode?.google ? "Seules les adresses de l'équipe peuvent entrer." : "Version locale. En ligne, on se connectera avec son compte Google."}
+            {mode?.email || mode?.google
+              ? "Adresse @nyuman.app ou adresse perso : les deux marchent."
+              : "Version locale. En ligne, on se connectera par e-mail."}
           </p>
         </div>
       </section>
     </div>
+  );
+}
+
+/** On tape son adresse, on reçoit un lien : pas de mot de passe à retenir. */
+function EmailForm() {
+  const [email, setEmail] = useState("");
+  const [sent, setSent] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setBusy(true);
+    try { setSent((await api.requestLink(email.trim())).minutes); }
+    catch { setSent(-1); }
+    finally { setBusy(false); }
+  };
+  if (sent > 0) {
+    return (
+      <div className="mt-6 rounded-2xl bg-[#E3F6EA] p-4 text-sm text-[#18794A]">
+        <p className="font-medium">Regardez votre boîte mail.</p>
+        <p className="mt-1">Si <b>{email.trim()}</b> fait partie de l'équipe, un lien vient d'y être envoyé. Il est valable {sent} minutes.</p>
+        <button onClick={() => setSent(0)} className="mt-2 text-xs font-medium underline">Changer d'adresse</button>
+      </div>
+    );
+  }
+  return (
+    <form onSubmit={submit} className="mt-6 space-y-2">
+      <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+        placeholder="prenom@nyuman.app" autoComplete="email"
+        className="w-full rounded-2xl border border-line bg-white px-4 py-3 text-[15px] outline-none focus:border-accent" />
+      <button disabled={busy}
+        className="w-full rounded-2xl bg-accent py-3 text-[15px] font-semibold text-white shadow-sm shadow-accent/30 hover:bg-accent-hover disabled:opacity-50">
+        {busy ? "Envoi…" : "Recevoir mon lien"}
+      </button>
+      {sent === -1 && <p className="text-sm text-busy">L'envoi n'a pas marché. Réessayez dans un moment.</p>}
+    </form>
   );
 }
 

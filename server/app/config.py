@@ -38,6 +38,13 @@ class Settings(BaseSettings):
     # Secours pour la toute première connexion en ligne : "adresse=identifiant,autre=identifiant".
     # À poser par Kevin, puis à retirer une fois les adresses remplies dans HQ.
     bootstrap_emails: str = ""
+    # Envoi des liens de connexion par e-mail (compte @nyuman.app chez Netim).
+    # Kevin pose l'identifiant et le mot de passe ; Kwame ne les lit jamais.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    mail_from: str = ""  # ex. "Nyuman HQ <hq@nyuman.app>" ; vide = on prend smtp_user
     google_client_id: str = ""
     google_client_secret: str = ""
     google_refresh_token: str = ""

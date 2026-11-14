@@ -16,7 +16,7 @@ def google(monkeypatch):
 
 async def test_etat_de_la_connexion(client, google):
     r = (await client.get("/api/auth/google/status")).json()
-    assert r == {"google": True, "dev_login": True}
+    assert r == {"google": True, "dev_login": True, "email": False}
 
 
 async def test_plusieurs_adresses_par_personne(mohamed, kevin):
@@ -192,3 +192,53 @@ async def test_hq_se_fabrique_sa_cle_de_session():
     await ensure_session_secret()  # au redémarrage, on garde la même
     async with SessionLocal() as s:
         assert (await s.get(Setting, "session_secret")).value == premiere
+
+
+async def test_connexion_par_lien_email(mohamed, monkeypatch):
+    """On tape son adresse, on reçoit un lien, on clique, on est entré."""
+    from sqlalchemy import select as sel
+
+    from app.db import SessionLocal
+    from app.domain.models import LoginLink
+    from app import mail
+
+    await mohamed.post("/api/members/sullyvan/emails", json={"email": "sullyvan.koffi@nyuman.app"})
+    envois = []
+    monkeypatch.setattr(mail, "configured", lambda: True)
+
+    async def faux_envoi(to, subject, text, html):
+        envois.append((to, text))
+        return True
+    monkeypatch.setattr(mail, "send", faux_envoi)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as lui:
+        r = await lui.post("/api/auth/email/request", json={"email": " Sullyvan.Koffi@Nyuman.app "})
+        assert r.status_code == 200 and r.json()["sent"] is True
+        assert len(envois) == 1 and envois[0][0] == "sullyvan.koffi@nyuman.app"
+        token = envois[0][1].split("/api/auth/email/")[1].split()[0]
+
+        r = await lui.get(f"/api/auth/email/{token}", follow_redirects=False)
+        assert r.headers["location"] == "/accueil"
+        assert (await lui.get("/api/auth/me")).json()["id"] == "sullyvan"
+        # le lien ne resert pas
+        assert "erreur=" in (await lui.get(f"/api/auth/email/{token}", follow_redirects=False)).headers["location"]
+
+    # une adresse hors équipe reçoit quand même un lien (on ne dit pas qui est dans l'équipe),
+    # mais il mène à « qui êtes-vous ? », pas à l'intérieur
+    envois.clear()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as inconnu:
+        await inconnu.post("/api/auth/email/request", json={"email": "inconnu@ailleurs.com"})
+        token = envois[0][1].split("/api/auth/email/")[1].split()[0]
+        r = await inconnu.get(f"/api/auth/email/{token}", follow_redirects=False)
+        assert r.headers["location"] == "/rejoindre"
+        assert (await inconnu.get("/api/auth/me")).status_code == 401
+
+    # pas de déluge : deux demandes de suite n'envoient qu'un seul lien
+    envois.clear()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as elle:
+        await elle.post("/api/auth/email/request", json={"email": "carmel@nyuman.app"})
+        await elle.post("/api/auth/email/request", json={"email": "carmel@nyuman.app"})
+    assert len(envois) == 1
+
+    async with SessionLocal() as s:
+        assert len((await s.scalars(sel(LoginLink))).all()) >= 2
