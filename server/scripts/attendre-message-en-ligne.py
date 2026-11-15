@@ -54,7 +54,9 @@ async def main() -> int:
         # Premier tour : on marque tout comme lu, on n'attend que la suite.
         for ch in (await c.get(f"{HQ}/api/channels", headers=h)).json():
             await c.post(f"{HQ}/api/channels/{ch['id']}/read", headers=h)
-        print(f"Guetteur HQ en ligne pour {noms.get(AGENT, AGENT)} sur {HQ}.", flush=True)
+        from datetime import datetime, timezone
+        depuis = datetime.now(timezone.utc).isoformat()
+        print(f"Guetteur HQ en ligne pour {noms.get(AGENT, AGENT)} sur {HQ} (depuis maintenant).", flush=True)
         fin = asyncio.get_event_loop().time() + MINUTES * 60
         while asyncio.get_event_loop().time() < fin:
             await asyncio.sleep(EVERY_S)
@@ -64,7 +66,11 @@ async def main() -> int:
                         continue
                     msgs = (await c.get(f"{HQ}/api/channels/{ch['id']}/messages?limit=5", headers=h)).json()
                     await c.post(f"{HQ}/api/channels/{ch['id']}/read", headers=h)
-                    dits = [m for m in msgs if m["author_id"] in humains]
+                    # Seulement ce qui m'est adressé, et seulement depuis que j'attends :
+                    # une discussion privée, ou mon nom cité.
+                    dits = [m for m in msgs
+                            if m["author_id"] in humains and m["created_at"] > depuis
+                            and (ch["kind"] == "dm" or f"<@{AGENT}>" in (m.get("body") or ""))]
                     if not dits:
                         continue
                     m = dits[-1]
