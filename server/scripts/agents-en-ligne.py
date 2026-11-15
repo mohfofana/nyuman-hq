@@ -85,39 +85,48 @@ async def main() -> None:
         await head_session(c)
         members = (await c.get(f"{HQ}/api/members")).json()
         agents = [m["id"] for m in members if m["kind"] == "agent" and m["id"] not in SKIP]
-        names = {m["id"]: m["name"] for m in members}
+        noms = {m["id"]: m["name"] for m in members}
+        humains = {m["id"] for m in members if m["kind"] == "human"}
         tokens = await ensure_tokens(c, agents)
         agents = [a for a in agents if a in tokens]
         if not agents:
             raise SystemExit("Aucune clé d'agent : vérifiez que vous êtes responsable sur ce HQ.")
-        print(f"Agents en ligne sur {HQ} : {', '.join(names[a] for a in agents)}.", flush=True)
+        print(f"Agents en ligne sur {HQ} : {', '.join(noms[a] for a in agents)}.", flush=True)
         print(f"Je regarde toutes les {EVERY_S} s. Laissez cette fenêtre ouverte.", flush=True)
-        vus: set[str] = set()
+        vus: set[tuple[str, str]] = set()   # (agent, message) : chacun répond pour son compte
         premier_tour = True
         while True:
             for agent in agents:
                 try:
                     h = agent_headers(agent, tokens)
-                    chans = (await c.get(f"{HQ}/api/channels", headers=h)).json()
+                    r = await c.get(f"{HQ}/api/channels", headers=h)
+                    chans = r.json() if r.status_code == 200 else []
+                    if not isinstance(chans, list):
+                        continue
                     for ch in chans:
                         if not (ch.get("unread") or ch.get("mentions")):
                             continue
-                        msgs = (await c.get(f"{HQ}/api/channels/{ch['id']}/messages?limit=5", headers=h)).json()
-                        humains = [m for m in msgs if names.get(m["author_id"]) and m["author_id"] not in agents
-                                   and m["author_id"] != agent]
+                        r = await c.get(f"{HQ}/api/channels/{ch['id']}/messages?limit=5", headers=h)
+                        msgs = r.json() if r.status_code == 200 else []
+                        if not isinstance(msgs, list):
+                            continue
                         await c.post(f"{HQ}/api/channels/{ch['id']}/read", headers=h)
-                        if not humains or premier_tour:
+                        if premier_tour:
                             continue
-                        dernier = humains[-1]
-                        if dernier["id"] in vus:
-                            continue
-                        vus.add(dernier["id"])
-                        where = f"le canal #{ch['name']}" if ch["kind"] == "channel" else "votre discussion privée"
-                        print(f"{names.get(dernier['author_id'], '?')} → {names[agent]} : "
-                              f"{dernier['body'][:70]}", flush=True)
-                        await answer(agent, names.get(dernier["author_id"], "quelqu'un"), where, dernier["body"])
+                        # On ne réveille un agent que si on s'adresse vraiment à lui :
+                        # une discussion privée, ou son nom cité. Pas tout ce qui passe dans un canal.
+                        for m in msgs:
+                            if m["author_id"] not in humains or (agent, m["id"]) in vus:
+                                continue
+                            cite = f"<@{agent}>" in (m.get("body") or "")
+                            if ch["kind"] != "dm" and not cite:
+                                continue
+                            vus.add((agent, m["id"]))
+                            where = f"le canal #{ch['name']}" if ch["kind"] == "channel" else "votre discussion privée"
+                            print(f"{noms.get(m['author_id'], '?')} → {noms[agent]} : {m['body'][:70]}", flush=True)
+                            await answer(agent, noms.get(m["author_id"], "quelqu'un"), where, m["body"])
                 except Exception as e:
-                    print(f"  ({names.get(agent, agent)} : {type(e).__name__}, on continue)", flush=True)
+                    print(f"  ({noms.get(agent, agent)} : {type(e).__name__}, on continue)", flush=True)
             premier_tour = False
             await asyncio.sleep(EVERY_S)
 
