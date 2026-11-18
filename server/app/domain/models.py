@@ -106,7 +106,11 @@ class LoginLink(Base):
 
 
 class Channel(Base):
-    """Un canal d'équipe (ouvert à tous) ou une discussion privée (dm)."""
+    """Un canal d'équipe ou une discussion privée (dm).
+
+    Un canal est ouvert à toute l'équipe, ou fermé : dans ce cas seules les personnes et les agents
+    qui en font partie le voient, comme un groupe WhatsApp.
+    """
 
     __tablename__ = "channels"
 
@@ -114,15 +118,24 @@ class Channel(Base):
     kind: Mapped[str] = mapped_column(String(10))  # "channel" | "dm"
     name: Mapped[str] = mapped_column(String(80), default="")
     topic: Mapped[str] = mapped_column(String(200), default="")
+    private: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    archived: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     created_by: Mapped[Optional[str]] = mapped_column(ForeignKey("members.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class ChannelMember(Base):
+    """Le lien entre une personne (ou un agent) et un canal.
+
+    `joined` distingue « il fait partie du canal » de « il l'a seulement lu » : un canal ouvert
+    crée une ligne dès la première lecture, et ça ne doit pas en faire un participant.
+    """
+
     __tablename__ = "channel_members"
 
     channel_id: Mapped[str] = mapped_column(ForeignKey("channels.id", ondelete="CASCADE"), primary_key=True)
     member_id: Mapped[str] = mapped_column(ForeignKey("members.id"), primary_key=True)
+    joined: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     last_read_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
 

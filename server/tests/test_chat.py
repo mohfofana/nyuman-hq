@@ -139,3 +139,66 @@ async def test_arobase_tous_previent_les_humains_pas_les_agents(mohamed):
         prevenus = set((await s.scalars(select(Mention.member_id).where(
             Mention.message_id == r.json()["id"]))).all())
     assert prevenus == {"kevin"}
+
+
+async def test_canal_ferme_seuls_les_choisis_le_voient(mohamed, kevin):
+    """Un canal fermé se comporte comme un groupe WhatsApp : hors de la liste, et inaccessible."""
+    from tests.conftest import login_as
+
+    r = await mohamed.post("/api/channels", json={
+        "name": "croissance", "private": True, "member_ids": ["abraham", "fatym", "aminata"]})
+    assert r.status_code == 201
+    cid = r.json()["id"]
+
+    # un agent peut en faire partie, comme une personne
+    assert set((await mohamed.get(f"/api/channels/{cid}/members")).json()["member_ids"]) == {
+        "mohamed", "abraham", "fatym", "aminata"}
+
+    # Kevin n'en fait pas partie : il ne le voit pas et ne peut pas l'ouvrir
+    assert cid not in [c["id"] for c in (await kevin.get("/api/channels")).json()]
+    assert (await kevin.get(f"/api/channels/{cid}/messages")).status_code == 404
+    assert (await kevin.post(f"/api/channels/{cid}/messages", json={"body": "coucou"})).status_code == 404
+
+    # Abraham, lui, le voit
+    abraham = await login_as("abraham")
+    assert cid in [c["id"] for c in (await abraham.get("/api/channels")).json()]
+    await abraham.aclose()
+
+
+async def test_seuls_mohamed_et_abraham_gerent_les_canaux(mohamed, kevin):
+    assert (await kevin.post("/api/channels", json={"name": "essai-kevin"})).status_code == 403
+    cid = (await mohamed.post("/api/channels", json={"name": "tech-ferme", "private": True,
+                                                     "member_ids": ["kevin"]})).json()["id"]
+    assert (await kevin.post(f"/api/channels/{cid}/members", json={"member_ids": ["carmel"]})).status_code == 403
+    assert (await kevin.delete(f"/api/channels/{cid}")).status_code == 403
+    assert (await kevin.patch(f"/api/channels/{cid}", json={"name": "autre"})).status_code == 403
+
+
+async def test_ajouter_retirer_renommer_supprimer(mohamed, kevin):
+    cid = (await mohamed.post("/api/channels", json={"name": "it", "private": True,
+                                                     "member_ids": ["kevin"]})).json()["id"]
+    # ajouter une personne et un agent
+    r = await mohamed.post(f"/api/channels/{cid}/members", json={"member_ids": ["maxime", "kodjo"]})
+    assert {"kevin", "maxime", "kodjo", "mohamed"} <= set(r.json()["member_ids"])
+    # retirer
+    r = await mohamed.delete(f"/api/channels/{cid}/members/kevin")
+    assert "kevin" not in r.json()["member_ids"]
+    assert (await kevin.get(f"/api/channels/{cid}/messages")).status_code == 404
+    # renommer
+    assert (await mohamed.patch(f"/api/channels/{cid}", json={"name": "Technique"})).json()["name"] == "technique"
+    # supprimer : plus personne ne le voit
+    assert (await mohamed.delete(f"/api/channels/{cid}")).status_code == 204
+    assert cid not in [c["id"] for c in (await mohamed.get("/api/channels")).json()]
+
+
+async def test_lire_un_canal_ouvert_ne_rend_pas_participant(mohamed, kevin):
+    """Sinon, en fermant un canal plus tard, on y laisserait tout le monde."""
+    from sqlalchemy import select
+
+    from app.db import SessionLocal
+    from app.domain.models import ChannelMember
+
+    await kevin.post("/api/channels/general/read")
+    async with SessionLocal() as s:
+        row = await s.get(ChannelMember, ("general", "kevin"))
+    assert row is not None and row.joined is False

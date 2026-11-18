@@ -32,6 +32,9 @@ LATER_COLUMNS = [
     "ALTER TABLE members ADD COLUMN IF NOT EXISTS ask_hour INTEGER DEFAULT 19",
     "ALTER TABLE projects ADD COLUMN IF NOT EXISTS hours_budget INTEGER",
     # L'adresse unique d'hier devient une liste (chacun peut avoir sa pro et sa perso).
+    "ALTER TABLE channels ADD COLUMN IF NOT EXISTS private BOOLEAN NOT NULL DEFAULT false",
+    "ALTER TABLE channels ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT false",
+    "ALTER TABLE channel_members ADD COLUMN IF NOT EXISTS joined BOOLEAN NOT NULL DEFAULT true",
     """DO $$ BEGIN
          IF EXISTS (SELECT 1 FROM information_schema.columns
                     WHERE table_name = 'members' AND column_name = 'email') THEN

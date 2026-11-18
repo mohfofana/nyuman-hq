@@ -60,11 +60,16 @@ export const joinApi = {
     req<Member>(`/api/members/join-requests/${encodeURIComponent(email)}/${ok ? "oui" : "non"}`, { method: "POST" }),
 };
 
+export type ChannelDetail = {
+  id: string; kind: "channel" | "dm"; name: string; topic: string;
+  private: boolean; created_by: string | null; member_ids: string[];
+};
 export type Channel = {
   id: string;
   kind: "channel" | "dm";
   name: string;
   topic: string;
+  private: boolean;
   member_ids: string[];
   unread: number;
   mentions: number;
@@ -95,8 +100,16 @@ export type PresenceSnap = { member_id: string; connected: boolean; idle: boolea
 
 export const chat = {
   channels: () => req<Channel[]>("/api/channels"),
-  createChannel: (name: string, topic: string) =>
-    req<{ id: string }>("/api/channels", { method: "POST", body: JSON.stringify({ name, topic }) }),
+  createChannel: (d: { name: string; topic?: string; private?: boolean; member_ids?: string[] }) =>
+    req<{ id: string }>("/api/channels", { method: "POST", body: JSON.stringify(d) }),
+  channelMembers: (id: string) => req<ChannelDetail>(`/api/channels/${id}/members`),
+  updateChannel: (id: string, d: { name?: string; topic?: string; private?: boolean }) =>
+    req<ChannelDetail>(`/api/channels/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
+  addMembers: (id: string, member_ids: string[]) =>
+    req<ChannelDetail>(`/api/channels/${id}/members`, { method: "POST", body: JSON.stringify({ member_ids }) }),
+  removeMember: (id: string, memberId: string) =>
+    req<ChannelDetail>(`/api/channels/${id}/members/${memberId}`, { method: "DELETE" }),
+  deleteChannel: (id: string) => req<void>(`/api/channels/${id}`, { method: "DELETE" }),
   openDm: (member_ids: string[]) => req<{ id: string }>("/api/dms", { method: "POST", body: JSON.stringify({ member_ids }) }),
   read: (id: string) => req<void>(`/api/channels/${id}/read`, { method: "POST" }),
   messages: (id: string, before?: string) =>

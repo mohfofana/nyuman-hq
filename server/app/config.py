@@ -57,6 +57,8 @@ class Settings(BaseSettings):
     agent_run_timeout_s: int = 240
     agent_max_budget_usd: float = 0.25
     # Agents dont la discussion Claude est déjà ouverte : HQ ne lance pas de copie, c'est elle qui répond.
+    # Qui gère les canaux (créer, ajouter, retirer, renommer, supprimer). Décidé par Mohamed le 16/11.
+    channel_admins: str = "mohamed,abraham"
     agent_wake_skip: str = ""
     # Sur le Mac : surveille la base (même en ligne) et fait répondre les agents. Jamais sur le serveur.
     agent_poll: bool = False

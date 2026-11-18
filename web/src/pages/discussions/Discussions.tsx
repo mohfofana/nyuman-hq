@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Hash, MessageSquarePlus, Plus, Search, Video } from "lucide-react";
+import { ArrowLeft, Hash, Lock, MessageSquarePlus, Plus, Search, Users, Video } from "lucide-react";
 import { chat, type Channel, type Member } from "../../lib/api";
 import { useSession } from "../../lib/session";
 import { useLive } from "../../lib/live";
@@ -12,6 +12,7 @@ import { Composer } from "./Composer";
 import { ThreadPanel } from "./ThreadPanel";
 import { TypingLine } from "./TypingLine";
 import { NewChannelDialog, NewDmDialog } from "./Dialogs";
+import { ChannelSettings, canManageChannels } from "./ChannelSettings";
 import { channelTitle } from "./format";
 
 function Unread({ c }: { c: Channel }) {
@@ -28,7 +29,10 @@ function ChannelRow({ c, active, members, me }: { c: Channel; active: boolean; m
     <Link to={`/discussions/${c.id}`}
       className={`flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-sm transition ${active ? "bg-accent-soft font-semibold text-accent" : bold ? "font-semibold text-ink hover:bg-surface" : "text-ink-soft hover:bg-surface hover:text-ink"}`}>
       {c.kind === "channel" ? (
-        <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${active ? "bg-white text-accent" : "bg-surface-2"}`}><Hash size={15} /></span>
+        <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${active ? "bg-white text-accent" : "bg-surface-2"}`}
+          title={c.private ? "Canal fermé" : undefined}>
+          {c.private ? <Lock size={14} /> : <Hash size={15} />}
+        </span>
       ) : other && !group ? (
         <Avatar member={other} presence={presenceOf(other)} size="sm" />
       ) : (
@@ -40,7 +44,7 @@ function ChannelRow({ c, active, members, me }: { c: Channel; active: boolean; m
   );
 }
 
-function Sidebar({ activeId, onNewDm, onNewChannel }: { activeId?: string; onNewDm: () => void; onNewChannel: () => void }) {
+function Sidebar({ activeId, onNewDm, onNewChannel }: { activeId?: string; onNewDm: () => void; onNewChannel?: () => void }) {
   const { me, members } = useSession();
   const { channels } = useLive();
   const [q, setQ] = useState("");
@@ -64,7 +68,7 @@ function Sidebar({ activeId, onNewDm, onNewChannel }: { activeId?: string; onNew
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
         <div className="flex items-center justify-between px-2.5 pb-1 pt-3">
           <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Canaux</span>
-          <button onClick={onNewChannel} title="Nouveau canal" className="rounded-md p-0.5 text-ink-muted hover:bg-surface hover:text-accent"><Plus size={16} /></button>
+          {onNewChannel && <button onClick={onNewChannel} title="Nouveau canal" className="rounded-md p-0.5 text-ink-muted hover:bg-surface hover:text-accent"><Plus size={16} /></button>}
         </div>
         {chans.map((c) => <ChannelRow key={c.id} c={c} active={c.id === activeId} members={members} me={me} />)}
         <div className="flex items-center justify-between px-2.5 pb-1 pt-5">
@@ -109,10 +113,16 @@ function ChatView({ channel }: { channel: Channel }) {
     setParams(p, { replace: true });
   };
 
+  const [reglages, setReglages] = useState(false);
+  // Les visages de l'en-tête : les participants d'un canal fermé, sinon toute l'équipe.
+  const dedans = channel.private ? members.filter((m) => channel.member_ids.includes(m.id)) : members;
+
   const welcome = !hasMore && !loading && (
     <div className="px-3 pb-2 pt-8">
       {solo ? <Avatar member={solo} presence={presenceOf(solo)} size="lg" /> : (
-        <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-soft text-accent"><Hash size={30} /></span>
+        <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-soft text-accent">
+          {channel.private ? <Lock size={28} /> : <Hash size={30} />}
+        </span>
       )}
       <h2 className="mt-3 text-2xl font-semibold tracking-tight">{channel.kind === "channel" ? `Bienvenue dans #${title}` : title}</h2>
       <p className="mt-1 text-sm text-ink-soft">
@@ -133,13 +143,23 @@ function ChatView({ channel }: { channel: Channel }) {
             <div className="truncate font-semibold">{title}</div>
             <div className="truncate text-xs text-ink-muted">
               {solo ? (lastSeenLabel(solo) ? `${presenceLabel(solo, presenceOf(solo))} · ${lastSeenLabel(solo)}` : presenceLabel(solo, presenceOf(solo))) + (solo.status_message ? ` · « ${solo.status_message} »` : "")
-                : channel.kind === "channel" ? channel.topic || "Toute l'équipe" : `${others.length + 1} membres`}
+                : channel.kind === "channel"
+                  ? (channel.private
+                      ? `Fermé · ${channel.member_ids.length} participants${channel.topic ? ` · ${channel.topic}` : ""}`
+                      : channel.topic || "Toute l'équipe")
+                  : `${others.length + 1} membres`}
             </div>
           </div>
           {channel.kind === "channel" && (
-            <div className="hidden -space-x-2 sm:flex">
-              {members.slice(0, 5).map((m) => <Avatar key={m.id} member={m} size="sm" ring />)}
-              {members.length > 5 && <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-2 text-[11px] font-semibold ring-2 ring-white">+{members.length - 5}</span>}
+            <button onClick={() => setReglages(true)} title="Participants et réglages"
+              className="flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-sm font-medium text-ink-soft transition hover:border-accent/40 hover:text-accent">
+              <Users size={16} /> <span className="hidden sm:inline">Participants</span>
+            </button>
+          )}
+          {channel.kind === "channel" && (
+            <div className="hidden -space-x-2 lg:flex">
+              {dedans.slice(0, 5).map((m) => <Avatar key={m.id} member={m} size="sm" ring />)}
+              {dedans.length > 5 && <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-2 text-[11px] font-semibold ring-2 ring-white">+{dedans.length - 5}</span>}
             </div>
           )}
           <Link to={`/agenda?nouvelle=1&canal=${channel.id}${channel.kind === "dm" ? `&avec=${others.map((o) => o.id).join(",")}` : ""}`}
@@ -158,11 +178,14 @@ function ChatView({ channel }: { channel: Channel }) {
         </div>
       </div>
       {threadId && <ThreadPanel rootId={threadId} channel={channel} members={members} me={me} onClose={() => openThread(null)} />}
+      {reglages && <ChannelSettings channel={channel} onClose={() => setReglages(false)}
+        onDeleted={() => { setReglages(false); window.location.href = "/discussions"; }} />}
     </div>
   );
 }
 
 export function Discussions() {
+  const { me: moi } = useSession();
   const { channelId } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -194,7 +217,8 @@ export function Discussions() {
   return (
     <div className="flex h-full">
       <div className={`${channelId ? "hidden md:block" : "block"} w-full shrink-0 border-r border-line bg-white md:w-72`}>
-        <Sidebar activeId={channelId} onNewDm={() => setDialog("dm")} onNewChannel={() => setDialog("channel")} />
+        <Sidebar activeId={channelId} onNewDm={() => setDialog("dm")}
+          onNewChannel={canManageChannels(moi?.id) ? () => setDialog("channel") : undefined} />
       </div>
       {channel ? <ChatView key={channel.id} channel={channel} /> : <div className="hidden flex-1 md:block" />}
       {dialog === "dm" && <DmDialogWrap onClose={() => setDialog(null)} onOpen={open} />}

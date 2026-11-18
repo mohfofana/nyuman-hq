@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Check, Hash, Search, X } from "lucide-react";
 import { chat, type Member } from "../../lib/api";
 import { Avatar } from "../../components/Avatar";
+import { useSession } from "../../lib/session";
 import { presenceOf } from "../../lib/presence";
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
@@ -52,29 +53,86 @@ export function NewDmDialog({ members, me, onClose, onOpen }: {
 }
 
 export function NewChannelDialog({ onClose, onOpen }: { onClose: () => void; onOpen: (id: string) => void }) {
+  const { me, members } = useSession();
   const [name, setName] = useState("");
   const [topic, setTopic] = useState("");
+  const [ferme, setFerme] = useState(true);
+  const [choisis, setChoisis] = useState<string[]>([]);
   const [error, setError] = useState("");
   const create = async () => {
-    try { onOpen((await chat.createChannel(name, topic)).id); }
-    catch (e: any) { setError(e.status === 409 ? "Un canal porte déjà ce nom." : "Création impossible."); }
+    try { onOpen((await chat.createChannel({ name, topic, private: ferme, member_ids: choisis })).id); }
+    catch (e: any) {
+      setError(e.status === 409 ? "Un canal porte déjà ce nom."
+        : e.status === 403 ? "Seuls Mohamed et Abraham créent les canaux." : "Création impossible.");
+    }
   };
+  const autres = members.filter((m) => m.id !== me?.id);
   return (
     <Modal title="Nouveau canal" onClose={onClose}>
       <label className="text-sm font-medium">Nom</label>
       <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-line px-3 py-2.5 focus-within:border-accent">
         <Hash size={16} className="text-accent" />
-        <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="ex. lancement-12-12" className="flex-1 text-sm outline-none" />
+        <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="ex. croissance" className="flex-1 text-sm outline-none" />
       </div>
       <label className="mt-4 block text-sm font-medium">De quoi parle-t-on ici ? <span className="font-normal text-ink-muted">(facultatif)</span></label>
-      <input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="ex. Tout pour le lancement public"
+      <input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="ex. Salons, contenus, lancement"
         className="mt-1.5 w-full rounded-xl border border-line px-3 py-2.5 text-sm outline-none focus:border-accent" />
-      <p className="mt-3 text-xs text-ink-muted">Toute l'équipe pourra lire et écrire dans ce canal.</p>
+
+      <div className="mt-4 flex rounded-xl bg-surface-2 p-1 text-sm font-medium">
+        {([[true, "Participants choisis"], [false, "Toute l'équipe"]] as const).map(([v, l]) => (
+          <button key={l} onClick={() => setFerme(v)}
+            className={`flex-1 rounded-lg px-3 py-1.5 transition ${ferme === v ? "bg-white shadow-sm" : "text-ink-soft hover:text-ink"}`}>{l}</button>
+        ))}
+      </div>
+
+      {ferme ? (
+        <>
+          <p className="mt-3 text-xs text-ink-muted">Seuls les choisis verront ce canal. Vous en faites partie d'office.</p>
+          <MemberPicker members={autres} choisis={choisis} onChange={setChoisis} />
+        </>
+      ) : (
+        <p className="mt-3 text-xs text-ink-muted">Les onze personnes et les agents verront ce canal.</p>
+      )}
+
       {error && <p className="mt-2 text-sm text-busy">{error}</p>}
       <button disabled={!name.trim()} onClick={create}
         className="mt-5 w-full rounded-full bg-accent py-3 text-sm font-semibold text-white shadow-sm shadow-accent/30 hover:bg-accent-hover disabled:bg-surface-2 disabled:text-ink-muted disabled:shadow-none">
         Créer le canal
       </button>
     </Modal>
+  );
+}
+
+/** Cocher des participants : les personnes puis les agents, dans la même liste. */
+export function MemberPicker({ members, choisis, onChange, exclure = [] }: {
+  members: Member[]; choisis: string[]; onChange: (ids: string[]) => void; exclure?: string[];
+}) {
+  const libres = members.filter((m) => !exclure.includes(m.id));
+  const basculer = (id: string) =>
+    onChange(choisis.includes(id) ? choisis.filter((x) => x !== id) : [...choisis, id]);
+  const bloc = (titre: string, liste: Member[]) => liste.length === 0 ? null : (
+    <div className="mt-2">
+      <div className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-muted">{titre}</div>
+      <div className="flex flex-wrap gap-1.5">
+        {liste.map((m) => {
+          const on = choisis.includes(m.id);
+          return (
+            <button key={m.id} onClick={() => basculer(m.id)}
+              className={`flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-sm transition ${
+                on ? "border-accent bg-accent-soft text-accent" : "border-line hover:bg-surface"}`}>
+              <Avatar member={m} size="sm" />
+              {m.name.split(" ")[0]}
+              {on && <Check size={13} />}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+  return (
+    <div className="mt-1 max-h-56 overflow-y-auto">
+      {bloc("Personnes", libres.filter((m) => m.kind === "human"))}
+      {bloc("Agents", libres.filter((m) => m.kind === "agent"))}
+    </div>
   );
 }
